@@ -232,7 +232,7 @@
             <div><h2 id="results-title">今日場次</h2><p id="selected-date"></p></div>
             <div class="results-controls"><label class="sort-control" id="sort-control">排序<select id="sort-order" aria-describedby="sort-note"><option value="time">時間（最近開演）</option><option value="movie">電影（各版本分開）</option><option value="version">版本（各電影分開）</option></select></label><span id="result-count" class="result-count" aria-live="polite"></span></div>
           </div>
-          <p class="sort-note" id="sort-note">同一電影的不同放映版本分開計算；預設顯示全部版本。版本名稱依各影城官方標示。</p>
+          <p class="sort-note" id="sort-note">同義版本合併選擇與計數，例如「數位(英)」與「數位‧英文版」統一為「數位（英語）」。不同語言、3D、特殊影廳及活動場保留區分；各場次仍顯示官方原始版本。</p>
           <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="sync-time" role="status" aria-live="polite">讀取本機快照…</span><button type="button" class="refresh-button" id="refresh-catalog" aria-describedby="refresh-note">↻ 更新場次</button></div>
           <div class="refresh-help hidden" id="refresh-help"><p>無法讀取線上快照。請確認網路後再試；現有場次會保留。</p></div>
           <p class="sr-only" id="refresh-note">重新載入已上線的場次快照，保留目前篩選；不會即時向戲院抓取資料。</p>
@@ -259,7 +259,7 @@
     let catalogue = JSON.parse(document.getElementById('catalog-data').textContent);
     let cinemas = catalogue.cinemas.map(function(c) { return {...c, official:c.officialUrl, schedules:c.showtimesUrl}; });
     let showings = catalogue.screenings;
-    let formats = [...new Set(showings.map(s => s.format))].sort();
+    let formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
     let selectedMovieKeys = [];
     function esc(value) { return String(value).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
     function posterHtml(item) {
@@ -375,7 +375,7 @@
       return cinemas.filter((cinema) => {
         if (!withinCinemaFilters(cinema, filters)) return false;
         const selected = new Set(filters.movieKeys || []);
-        const matchesSelection = showing => showing.cinemaId === cinema.id && (selected.size > 0 || showing.date === selectedDate) && isUpcoming(showing) && (!filters.format || showing.format === filters.format) && (!selected.size || selected.has(movieVersionKey(showing)));
+        const matchesSelection = showing => showing.cinemaId === cinema.id && (selected.size > 0 || showing.date === selectedDate) && isUpcoming(showing) && (!filters.format || normalizeMovieFormat(showing.format) === normalizeMovieFormat(filters.format)) && (!selected.size || selected.has(movieVersionKey(showing)));
         if (selected.size && !showings.some(matchesSelection)) return false;
         const venueMatch = cinemaTextMatches(cinema, filters.query);
         const movieMatch = !filters.query || showings.some((showing) =>
@@ -409,7 +409,22 @@
         return url.href;
       } catch { return undefined; }
     }
-    function movieVersionKey(item) { return JSON.stringify([item.title, item.format]); }
+    function normalizeMovieFormat(format) {
+      const compact = format.normalize('NFKC').replace(/[\s‧·・()]/g, '');
+      const digitalFirst = /^(2D|3D)?數位(.+)$/.exec(compact);
+      const languageFirst = /^(.+?)(2D|3D)?數位(?:版|板)?$/.exec(compact);
+      const language = (digitalFirst?.[2] ?? languageFirst?.[1] ?? '').replace(/(?:版|板)$/, '');
+      const languages = {
+        英: '英語', 英文: '英語', 英語: '英語', 日: '日語', 日文: '日語', 日語: '日語',
+        韓: '韓語', 韓文: '韓語', 韓語: '韓語', 粵: '粵語', 粵語: '粵語',
+        國: '國語', 國語: '國語', 中: '中文', 中文: '中文',
+        法: '法語', 法文: '法語', 法語: '法語', 波蘭語: '波蘭語', 泰語: '泰語', 越南語: '越南語',
+      };
+      if (!Object.hasOwn(languages, language)) return format;
+      const dimension = digitalFirst?.[1] ?? languageFirst?.[2];
+      return `${dimension === '3D' ? '3D ' : ''}數位（${languages[language]}）`;
+    }
+    function movieVersionKey(item) { return JSON.stringify([item.title, normalizeMovieFormat(item.format)]); }
     function movieVersionCounts(items) {
       const counts = new Map();
       items.forEach(item => { const key = movieVersionKey(item); counts.set(key, (counts.get(key) || 0) + 1); });
@@ -420,7 +435,7 @@
       return [...items].sort((a, b) => {
         if (order !== 'time') {
           const title = collator.compare(a.title, b.title);
-          const version = collator.compare(a.format, b.format);
+          const version = collator.compare(normalizeMovieFormat(a.format), normalizeMovieFormat(b.format));
           const group = (order === 'version' ? version || title : title || version) || movieVersionKey(a).localeCompare(movieVersionKey(b));
           if (group) return group;
         }
@@ -433,7 +448,7 @@
         const cinema = cinemas.find((item) => item.id === showing.cinemaId);
         if (!cinema) return false;
         const queryMatch = cinemaTextMatches(cinema, filters.query) || !filters.query || showing.title.toLocaleLowerCase('zh-TW').includes(filters.query);
-        return (allDates || showing.date === selectedDate) && isUpcoming(showing) && queryMatch && (!filters.format || showing.format === filters.format) && (!selected.size || selected.has(movieVersionKey(showing))) && withinCinemaFilters(cinema, filters);
+        return (allDates || showing.date === selectedDate) && isUpcoming(showing) && queryMatch && (!filters.format || normalizeMovieFormat(showing.format) === normalizeMovieFormat(filters.format)) && (!selected.size || selected.has(movieVersionKey(showing))) && withinCinemaFilters(cinema, filters);
       });
       return sortScreenings(items, sortSelect.value);
     }
@@ -447,7 +462,7 @@
         const bookingPage = officialBookingPage(item);
         const variantKey = movieVersionKey(item);
         const startsGroup = sortSelect.value !== 'time' && (index === 0 || movieVersionKey(items[index - 1]) !== variantKey);
-        const groupHeading = startsGroup ? `<div class="movie-group-heading"><h3>${esc(item.title)} <span class="tag">${esc(item.format)}</span></h3><span>${counts.get(variantKey)} 個場次</span></div>` : '';
+        const groupHeading = startsGroup ? `<div class="movie-group-heading"><h3>${esc(item.title)} <span class="tag">${esc(normalizeMovieFormat(item.format))}</span></h3><span>${counts.get(variantKey)} 個場次</span></div>` : '';
         return `${groupHeading}<article class="screening-card">
           ${posterHtml(item)}
           <div><h3 class="movie-title">${esc(item.title)}</h3>
@@ -522,11 +537,11 @@
       showings.forEach(row => {
         if (!cinemaIds.has(row.cinemaId)) return;
         const key = movieVersionKey(row);
-        choices.set(key, {key, title: row.title, format: row.format, count: 0});
+        choices.set(key, {key, title: row.title, format: normalizeMovieFormat(row.format), count: 0});
       });
       filteredShowings({...filters, query: '', movieKeys: []}, true).forEach(row => {
         const key = movieVersionKey(row);
-        choices.set(key, {key, title: row.title, format: row.format, count: (choices.get(key)?.count || 0) + 1});
+        choices.set(key, {key, title: row.title, format: normalizeMovieFormat(row.format), count: (choices.get(key)?.count || 0) + 1});
       });
       (filters.movieKeys || []).forEach(key => {
         if (choices.has(key)) return;
@@ -596,7 +611,7 @@
         catalogue = next;
         cinemas = next.cinemas.map(c => ({...c, official: c.officialUrl, schedules: c.showtimesUrl}));
         showings = next.screenings;
-        formats = [...new Set(showings.map(s => s.format))].sort();
+        formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
         const today = taipeiDateKey();
         if (selectedDate === taipeiTodayKey || selectedDate < today) selectedDate = today;
         taipeiTodayKey = today;
