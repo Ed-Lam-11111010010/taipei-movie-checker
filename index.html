@@ -44,6 +44,8 @@
     .date-button { min-width: 94px; padding: 10px 13px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--muted); text-align: left; cursor: pointer; }
     .date-button span { display: block; font-size: 10px; }
     .date-button strong { display: block; margin-top: 3px; color: var(--ink); font-size: 14px; }
+    .date-button:disabled, input[type="date"]:disabled { opacity: .5; cursor: not-allowed; }
+    .screening-date { color: var(--muted); font-size: 11px; white-space: nowrap; }
     .date-button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #b8bdad; }
     .date-button[aria-pressed="true"] strong { color: var(--acid); }
     .view-switch { display: flex; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: #ebe9e1; }
@@ -163,7 +165,7 @@
       .clear-button { margin-top: 12px; }
       .results { width: 100%; }
       .screening-actions { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 8px; }
-      .screening-actions .time { grid-column: 1 / -1; }
+      .screening-actions .time, .screening-actions .screening-date { grid-column: 1 / -1; }
       .venue-list { grid-template-columns: 1fr; }
       .map-layout { display: flex; flex-direction: column; }
       .map-destination { min-height: 310px; padding: 18px; }
@@ -215,7 +217,7 @@
         <aside class="filters" aria-labelledby="filter-title">
           <h2 id="filter-title">縮小選擇</h2>
           <div class="filter-controls">
-            <details class="movie-picker" id="movie-picker"><summary>選擇電影（可多選）<span id="movie-selection-status">全部電影／版本</span></summary><div class="movie-picker-body"><button class="movie-clear" id="movie-clear" type="button">取消電影勾選</button><p class="movie-picker-note">列出已取得資料中所有日期、影城與版本的電影；場次數依目前日期及篩選條件計算。可多選，未勾選時顯示全部。</p><div class="movie-options" id="movie-options" role="group" aria-label="選擇電影與版本"></div></div></details>
+            <details class="movie-picker" id="movie-picker"><summary>選擇電影（可多選）<span id="movie-selection-status">全部電影／版本</span></summary><div class="movie-picker-body"><button class="movie-clear" id="movie-clear" type="button">取消電影勾選</button><p class="movie-picker-note">列出已取得資料中所有日期、影城與版本的電影。勾選後跨日期顯示該電影的未開演場次；取消勾選後恢復按日期查看。下列數量為符合其他篩選的跨日期場次數。</p><div class="movie-options" id="movie-options" role="group" aria-label="選擇電影與版本"></div></div></details>
             <label class="field query-field"><span>關鍵字搜尋（選填）</span><input id="query" type="search" placeholder="片名可直接勾選；也可搜尋影城或地址" autocomplete="off"></label>
             <label class="field"><span>行政區</span><select id="district"><option value="">全部行政區</option></select></label>
             <label class="field"><span>影城</span><select id="cinema"><option value="">全部追蹤影城</option></select></label>
@@ -234,7 +236,7 @@
           <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="sync-time" role="status" aria-live="polite">讀取本機快照…</span><button type="button" class="refresh-button" id="refresh-catalog" aria-describedby="refresh-note">↻ 更新場次</button></div>
           <div class="refresh-help hidden" id="refresh-help"><p>無法讀取線上快照。請確認網路後再試；現有場次會保留。</p></div>
           <p class="sr-only" id="refresh-note">重新載入已上線的場次快照，保留目前篩選；不會即時向戲院抓取資料。</p>
-          <div id="source-health" class="filter-foot" style="white-space:pre-line;margin:0 0 16px"></div><label class="field" style="margin:0 0 16px"><span>其他日期（含預售場次）</span><input id="date-picker" type="date"></label><div id="screening-view" class="screening-list"></div>
+          <div id="source-health" class="filter-foot" style="white-space:pre-line;margin:0 0 16px"></div><label class="field" style="margin:0 0 16px"><span id="date-scope-note">其他日期（含預售場次）</span><input id="date-picker" type="date"></label><div id="screening-view" class="screening-list"></div>
           <div id="cinema-view" class="venue-list hidden"></div>
           <div id="map-layout" class="map-layout hidden">
             <div class="map-destination"><span class="venue-kicker">GOOGLE MAPS · 地點導覽</span><h3 id="map-selected-name"></h3><p id="map-selected-address"></p><iframe id="theatre-map" class="theatre-map" title="Google Maps 影城位置" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe><span class="map-hint">可直接在此拖曳、縮放與查看位置；選擇其他影城會切換地圖。地圖由 Google 提供。</span><a id="map-launch" class="map-open" target="_blank" rel="noopener noreferrer">地圖無法載入？在 Google Maps 查看 ↗</a></div>
@@ -373,7 +375,7 @@
       return cinemas.filter((cinema) => {
         if (!withinCinemaFilters(cinema, filters)) return false;
         const selected = new Set(filters.movieKeys || []);
-        const matchesSelection = showing => showing.cinemaId === cinema.id && showing.date === selectedDate && isUpcoming(showing) && (!filters.format || showing.format === filters.format) && (!selected.size || selected.has(movieVersionKey(showing)));
+        const matchesSelection = showing => showing.cinemaId === cinema.id && (selected.size > 0 || showing.date === selectedDate) && isUpcoming(showing) && (!filters.format || showing.format === filters.format) && (!selected.size || selected.has(movieVersionKey(showing)));
         if (selected.size && !showings.some(matchesSelection)) return false;
         const venueMatch = cinemaTextMatches(cinema, filters.query);
         const movieMatch = !filters.query || showings.some((showing) =>
@@ -425,12 +427,13 @@
         return startTime(a) - startTime(b) || a.id.localeCompare(b.id);
       });
     }
-    function filteredShowings(filters) {
+    function filteredShowings(filters, allDates = Boolean(filters.movieKeys?.length)) {
       const selected = new Set(filters.movieKeys || []);
       const items = showings.filter((showing) => {
         const cinema = cinemas.find((item) => item.id === showing.cinemaId);
+        if (!cinema) return false;
         const queryMatch = cinemaTextMatches(cinema, filters.query) || !filters.query || showing.title.toLocaleLowerCase('zh-TW').includes(filters.query);
-        return showing.date === selectedDate && isUpcoming(showing) && queryMatch && (!filters.format || showing.format === filters.format) && (!selected.size || selected.has(movieVersionKey(showing))) && withinCinemaFilters(cinema, filters);
+        return (allDates || showing.date === selectedDate) && isUpcoming(showing) && queryMatch && (!filters.format || showing.format === filters.format) && (!selected.size || selected.has(movieVersionKey(showing))) && withinCinemaFilters(cinema, filters);
       });
       return sortScreenings(items, sortSelect.value);
     }
@@ -452,7 +455,7 @@
             <div class="cinema-row"><span class="pin" aria-hidden="true">⌖</span>${esc(cinema.name)}</div>
             <p class="address">${esc(cinema.address)}</p>
           </div>
-          <div class="screening-actions"><span class="time">${esc(item.time)}</span><a class="action-link" href="${esc(bookingPage || cinema.bookingUrl || item.sourceUrl || filmPage || cinema.schedules)}" title="${esc(bookingPage ? `訂購《${item.title}》${item.date} ${item.time} ${item.format}` : cinema.bookingUrl ? '前往官方訂票系統，請選擇影城與場次' : '此場次未提供有效訂票連結，查看官方場次')}" target="_blank" rel="noopener noreferrer">${bookingPage ? '官方場次・訂票 ↗' : cinema.bookingUrl ? '官方訂票・選場次 ↗' : '官方場次 ↗'}</a><a class="map-quick-link" href="${mapsSearch(cinema)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a></div>
+          <div class="screening-actions"><time class="screening-date" datetime="${esc(item.date)}">${esc(item.date)}（${dateLabel(item.date, {weekday: 'short'})}）</time><span class="time">${esc(item.time)}</span><a class="action-link" href="${esc(bookingPage || cinema.bookingUrl || item.sourceUrl || filmPage || cinema.schedules)}" title="${esc(bookingPage ? `訂購《${item.title}》${item.date} ${item.time} ${item.format}` : cinema.bookingUrl ? '前往官方訂票系統，請選擇影城與場次' : '此場次未提供有效訂票連結，查看官方場次')}" target="_blank" rel="noopener noreferrer">${bookingPage ? '官方場次・訂票 ↗' : cinema.bookingUrl ? '官方訂票・選場次 ↗' : '官方場次 ↗'}</a><a class="map-quick-link" href="${mapsSearch(cinema)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a></div>
         </article>`;
       }).join('');
       list.querySelectorAll('.poster img').forEach((img) => img.addEventListener('error', () => img.remove(), {once: true}));
@@ -463,7 +466,7 @@
       const items = filteredCinemas(filters);
       list.innerHTML = items.map((cinema) => {
         const count = filteredShowings(filters).filter((showing) => showing.cinemaId === cinema.id).length;
-        return `<article class="venue-card"><span class="venue-kicker">${esc(cinema.chain)} · ${esc(cinema.district)}</span><h3>${esc(cinema.name)}</h3><p>${esc(cinema.address)}<br>選定日期取得 ${count} 個場次；詳見來源狀態。</p><div class="venue-actions"><a class="map-link" href="${mapsSearch(cinema)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a><a href="${esc(cinema.official)}" target="_blank" rel="noopener noreferrer">影城資訊 ↗</a><a href="${esc(cinema.schedules)}" target="_blank" rel="noopener noreferrer">官方場次 ↗</a></div></article>`;
+        return `<article class="venue-card"><span class="venue-kicker">${esc(cinema.chain)} · ${esc(cinema.district)}</span><h3>${esc(cinema.name)}</h3><p>${esc(cinema.address)}<br>${filters.movieKeys.length ? '所有日期' : '選定日期'}取得 ${count} 個場次；詳見來源狀態。</p><div class="venue-actions"><a class="map-link" href="${mapsSearch(cinema)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a><a href="${esc(cinema.official)}" target="_blank" rel="noopener noreferrer">影城資訊 ↗</a><a href="${esc(cinema.schedules)}" target="_blank" rel="noopener noreferrer">官方場次 ↗</a></div></article>`;
       }).join('');
       list.classList.toggle('hidden', selectedView !== 'cinemas');
     }
@@ -480,8 +483,11 @@
     }
     function render() {
       document.getElementById('date-picker').value=selectedDate;
-      document.querySelectorAll('.date-button').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.date===selectedDate)));
       const filters = currentFilters();
+      const allMovieDates = filters.movieKeys.length > 0;
+      $('#date-picker').disabled = allMovieDates;
+      $('#date-scope-note').textContent = allMovieDates ? '已選電影：顯示所有日期；取消電影勾選後可按日期查看。' : '其他日期（含預售場次）';
+      document.querySelectorAll('.date-button').forEach(item => { item.disabled = allMovieDates; item.setAttribute('aria-pressed', String(!allMovieDates && item.dataset.date === selectedDate)); });
       renderMoviePicker(filters);
       $('#sort-control').classList.toggle('hidden', selectedView !== 'screenings');
       $('#sort-note').classList.toggle('hidden', selectedView !== 'screenings');
@@ -493,7 +499,7 @@
         $('#results-title').textContent = '電影場次';
         $('#result-count').textContent = `${movieVersionCounts(items).size} 部電影版本 · ${items.length} 個場次`;
         const sortLabel = {time:'依時間排序',movie:'依電影・各版本分開',version:'依版本・各電影分開'}[sortSelect.value];
-        $('#selected-date').textContent = `${dateLabel(selectedDate, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} · 台北時間・${sortLabel}・隱藏已開演`;
+        $('#selected-date').textContent = `${allMovieDates ? '已選電影・所有日期' : dateLabel(selectedDate, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} · 台北時間・${sortLabel}・隱藏已開演`;
         $('#empty-state').classList.toggle('hidden', items.length > 0);
       } else if (selectedView === 'cinemas') {
         const items = filteredCinemas(filters);
@@ -518,7 +524,7 @@
         const key = movieVersionKey(row);
         choices.set(key, {key, title: row.title, format: row.format, count: 0});
       });
-      filteredShowings({...filters, query: '', movieKeys: []}).forEach(row => {
+      filteredShowings({...filters, query: '', movieKeys: []}, true).forEach(row => {
         const key = movieVersionKey(row);
         choices.set(key, {key, title: row.title, format: row.format, count: (choices.get(key)?.count || 0) + 1});
       });
@@ -530,7 +536,7 @@
       return [...choices.values()].sort((a,b) => collator.compare(a.title,b.title) || collator.compare(a.format,b.format) || a.key.localeCompare(b.key));
     }
     function movieChoiceHtml(choice) {
-      return `<label class="movie-choice"><input type="checkbox" name="movie-versions" data-movie-key="${esc(choice.key)}" value="${esc(choice.key)}" ${selectedMovieKeys.includes(choice.key) ? 'checked' : ''}><span><strong>${esc(choice.title)}</strong><small>${esc(choice.format)}</small><small>${choice.count ? '此日期／篩選：'+choice.count+' 個場次' : '此日期／篩選暫無未開演場次'}</small></span></label>`;
+      return `<label class="movie-choice"><input type="checkbox" name="movie-versions" data-movie-key="${esc(choice.key)}" value="${esc(choice.key)}" ${selectedMovieKeys.includes(choice.key) ? 'checked' : ''}><span><strong>${esc(choice.title)}</strong><small>${esc(choice.format)}</small><small>${choice.count ? '所有日期：'+choice.count+' 個場次' : '目前篩選下暫無未開演場次'}</small></span></label>`;
     }
     function renderMoviePicker(filters) {
       const list = $('#movie-options');
