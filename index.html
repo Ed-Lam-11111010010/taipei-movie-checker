@@ -61,6 +61,14 @@
     .results-head h2 { margin: 0; font: 500 24px var(--serif); }
     .results-head p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
     .result-count { color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .results-head { flex-wrap: wrap; gap: 12px; }
+    .results-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+    .sort-control { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+    .sort-control select { min-height: 38px; max-width: 100%; padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); font: inherit; }
+    .sort-note { margin: 0 0 14px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .movie-group-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding: 12px 0 8px; border-bottom: 1px solid var(--line); }
+    .movie-group-heading h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; overflow-wrap: anywhere; margin: 0; font: 500 18px/1.4 var(--serif); }
+    .movie-group-heading > span { color: var(--muted); font-size: 11px; }
     .status-line { display: flex; align-items: center; gap: 8px; margin: 0 0 13px; padding: 9px 12px; border-radius: 7px; background: #ebe9e1; color: #55574e; font-size: 10px; }
     .status-line { flex-wrap: wrap; }
     .refresh-button { margin-left: auto; padding: 7px 12px; border: 1px solid var(--line); border-radius: 5px; background: var(--card); color: var(--ink); cursor: pointer; font: inherit; font-weight: 700; }
@@ -206,8 +214,9 @@
         <section class="results" aria-labelledby="results-title">
           <div class="results-head">
             <div><h2 id="results-title">今日場次</h2><p id="selected-date"></p></div>
-            <span id="result-count" class="result-count" aria-live="polite"></span>
+            <div class="results-controls"><label class="sort-control" id="sort-control">排序<select id="sort-order" aria-describedby="sort-note"><option value="time">時間（最近開演）</option><option value="movie">電影（各版本分開）</option><option value="version">版本（各電影分開）</option></select></label><span id="result-count" class="result-count" aria-live="polite"></span></div>
           </div>
+          <p class="sort-note" id="sort-note">同一電影的不同放映版本分開計算；預設顯示全部版本。版本名稱依各影城官方標示。</p>
           <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="sync-time" role="status" aria-live="polite">讀取本機快照…</span><button type="button" class="refresh-button" id="refresh-catalog" aria-describedby="refresh-note">↻ 更新場次</button></div>
           <div class="refresh-help hidden" id="refresh-help"><p>無法讀取線上快照。請確認網路後再試；現有場次會保留。</p></div>
           <p class="sr-only" id="refresh-note">重新載入已上線的場次快照，保留目前篩選；不會即時向戲院抓取資料。</p>
@@ -274,6 +283,7 @@
     const districtSelect = $('#district');
     const queryInput = $('#query');
     const formatSelect = $('#format');
+    const sortSelect = $('#sort-order');
 
     function mapsSearch(cinema) {
       return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${cinema.name} ${cinema.address}`)}`;
@@ -379,21 +389,44 @@
         return url.href;
       } catch { return undefined; }
     }
+    function movieVersionKey(item) { return JSON.stringify([item.title, item.format]); }
+    function movieVersionCounts(items) {
+      const counts = new Map();
+      items.forEach(item => { const key = movieVersionKey(item); counts.set(key, (counts.get(key) || 0) + 1); });
+      return counts;
+    }
+    function sortScreenings(items, order) {
+      const collator = new Intl.Collator('zh-TW', {numeric: true, sensitivity: 'variant'});
+      return [...items].sort((a, b) => {
+        if (order !== 'time') {
+          const title = collator.compare(a.title, b.title);
+          const version = collator.compare(a.format, b.format);
+          const group = (order === 'version' ? version || title : title || version) || movieVersionKey(a).localeCompare(movieVersionKey(b));
+          if (group) return group;
+        }
+        return startTime(a) - startTime(b) || a.id.localeCompare(b.id);
+      });
+    }
     function filteredShowings(filters) {
-      return showings.filter((showing) => {
+      const items = showings.filter((showing) => {
         const cinema = cinemas.find((item) => item.id === showing.cinemaId);
         const queryMatch = cinemaTextMatches(cinema, filters.query) || !filters.query || showing.title.toLocaleLowerCase('zh-TW').includes(filters.query);
         return showing.date === selectedDate && isUpcoming(showing) && queryMatch && (!filters.format || showing.format === filters.format) && withinCinemaFilters(cinema, filters);
-      }).sort((a, b) => startTime(a) - startTime(b) || a.id.localeCompare(b.id));
+      });
+      return sortScreenings(items, sortSelect.value);
     }
     function renderShowings(filters) {
       const list = $('#screening-view');
       const items = filteredShowings(filters);
-      list.innerHTML = items.map((item) => {
+      const counts = movieVersionCounts(items);
+      list.innerHTML = items.map((item, index) => {
         const cinema = cinemas.find((candidate) => candidate.id === item.cinemaId);
         const filmPage = officialFilmPage(item);
         const bookingPage = officialBookingPage(item);
-        return `<article class="screening-card">
+        const variantKey = movieVersionKey(item);
+        const startsGroup = sortSelect.value !== 'time' && (index === 0 || movieVersionKey(items[index - 1]) !== variantKey);
+        const groupHeading = startsGroup ? `<div class="movie-group-heading"><h3>${esc(item.title)} <span class="tag">${esc(item.format)}</span></h3><span>${counts.get(variantKey)} 個場次</span></div>` : '';
+        return `${groupHeading}<article class="screening-card">
           ${posterHtml(item)}
           <div><h3 class="movie-title">${esc(item.title)}</h3>
             <div class="movie-meta"><span class="tag">${esc(item.format)}</span><span class="tag">官方公開場次</span></div>
@@ -430,14 +463,17 @@
       document.getElementById('date-picker').value=selectedDate;
       document.querySelectorAll('.date-button').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.date===selectedDate)));
       const filters = currentFilters();
+      $('#sort-control').classList.toggle('hidden', selectedView !== 'screenings');
+      $('#sort-note').classList.toggle('hidden', selectedView !== 'screenings');
       renderShowings(filters);
       renderCinemas(filters);
       renderMap(filters);
       if (selectedView === 'screenings') {
         const items = filteredShowings(filters);
         $('#results-title').textContent = '電影場次';
-        $('#result-count').textContent = `${items.length} 個官方公開場次`;
-        $('#selected-date').textContent = `${dateLabel(selectedDate, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} · 台北時間・依時間排序・隱藏已開演`;
+        $('#result-count').textContent = `${movieVersionCounts(items).size} 部電影版本 · ${items.length} 個場次`;
+        const sortLabel = {time:'依時間排序',movie:'依電影・各版本分開',version:'依版本・各電影分開'}[sortSelect.value];
+        $('#selected-date').textContent = `${dateLabel(selectedDate, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} · 台北時間・${sortLabel}・隱藏已開演`;
         $('#empty-state').classList.toggle('hidden', items.length > 0);
       } else if (selectedView === 'cinemas') {
         const items = filteredCinemas(filters);
@@ -461,6 +497,7 @@
     }));
     [queryInput, cinemaSelect, districtSelect, formatSelect].forEach((control) => control.addEventListener('input', render));
     [cinemaSelect, districtSelect, formatSelect].forEach((control) => control.addEventListener('change', render));
+    sortSelect.addEventListener('change', render);
     $('#clear').addEventListener('click', () => {
       queryInput.value = ''; cinemaSelect.value = ''; districtSelect.value = ''; formatSelect.value = ''; render(); queryInput.focus();
     });
