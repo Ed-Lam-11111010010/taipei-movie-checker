@@ -61,6 +61,19 @@
     .results-head h2 { margin: 0; font: 500 24px var(--serif); }
     .results-head p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
     .result-count { color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .movie-picker, .query-field { grid-column: 1 / -1; }
+    .movie-picker { min-width: 0; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); }
+    .movie-picker summary { padding: 12px; color: var(--ink); font-size: 12px; font-weight: 700; cursor: pointer; }
+    .movie-picker summary span { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; font-weight: 400; }
+    .movie-picker-body { padding: 0 10px 10px; }
+    .movie-clear { min-height: 32px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--card); color: var(--ink); font: inherit; font-size: 11px; cursor: pointer; }
+    .movie-picker-note { margin: 8px 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .movie-options { max-height: 280px; overflow-y: auto; overscroll-behavior: contain; }
+    .movie-choice { display: flex; gap: 9px; align-items: flex-start; padding: 9px 4px; border-top: 1px solid var(--line); cursor: pointer; }
+    .movie-choice input { flex: 0 0 auto; width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--purple); }
+    .movie-choice span { min-width: 0; }
+    .movie-choice strong { display: block; color: var(--ink); font-size: 12px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+    .movie-choice small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; line-height: 1.5; }
     .results-head { flex-wrap: wrap; gap: 12px; }
     .results-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
     .sort-control { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
@@ -202,7 +215,8 @@
         <aside class="filters" aria-labelledby="filter-title">
           <h2 id="filter-title">縮小選擇</h2>
           <div class="filter-controls">
-            <label class="field"><span>搜尋電影或影城</span><input id="query" type="search" placeholder="輸入片名、影城或地址" autocomplete="off"></label>
+            <details class="movie-picker" id="movie-picker"><summary>選擇電影（可多選）<span id="movie-selection-status">全部電影／版本</span></summary><div class="movie-picker-body"><button class="movie-clear" id="movie-clear" type="button">取消電影勾選</button><p class="movie-picker-note">直接勾選片名即可。不同版本分開選擇，未勾選時顯示全部。</p><div class="movie-options" id="movie-options" role="group" aria-label="選擇電影與版本"></div></div></details>
+            <label class="field query-field"><span>關鍵字搜尋（選填）</span><input id="query" type="search" placeholder="片名可直接勾選；也可搜尋影城或地址" autocomplete="off"></label>
             <label class="field"><span>行政區</span><select id="district"><option value="">全部行政區</option></select></label>
             <label class="field"><span>影城</span><select id="cinema"><option value="">全部追蹤影城</option></select></label>
             <label class="field"><span>放映版本</span><select id="format"><option value="">全部版本</option></select></label>
@@ -244,6 +258,7 @@
     let cinemas = catalogue.cinemas.map(function(c) { return {...c, official:c.officialUrl, schedules:c.showtimesUrl}; });
     let showings = catalogue.screenings;
     let formats = [...new Set(showings.map(s => s.format))].sort();
+    let selectedMovieKeys = [];
     function esc(value) { return String(value).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
     function posterHtml(item) {
       const fallback = `<span class="poster-fallback" aria-hidden="true"><small>FILM POSTER</small><b>${esc(item.title)}</b><small>暫無海報</small></span>`;
@@ -342,7 +357,8 @@
         query: queryInput.value.trim().toLocaleLowerCase('zh-TW'),
         district: districtSelect.value,
         cinema: cinemaSelect.value,
-        format: formatSelect.value
+        format: formatSelect.value,
+        movieKeys: [...selectedMovieKeys]
       };
     }
     function cinemaTextMatches(cinema, query) {
@@ -356,10 +372,12 @@
     function filteredCinemas(filters) {
       return cinemas.filter((cinema) => {
         if (!withinCinemaFilters(cinema, filters)) return false;
+        const selected = new Set(filters.movieKeys || []);
+        const matchesSelection = showing => showing.cinemaId === cinema.id && showing.date === selectedDate && isUpcoming(showing) && (!filters.format || showing.format === filters.format) && (!selected.size || selected.has(movieVersionKey(showing)));
+        if (selected.size && !showings.some(matchesSelection)) return false;
         const venueMatch = cinemaTextMatches(cinema, filters.query);
         const movieMatch = !filters.query || showings.some((showing) =>
-          showing.cinemaId === cinema.id && showing.date === selectedDate && isUpcoming(showing) &&
-          (!filters.format || showing.format === filters.format) &&
+          matchesSelection(showing) &&
           showing.title.toLocaleLowerCase('zh-TW').includes(filters.query)
         );
         return venueMatch || movieMatch;
@@ -408,10 +426,11 @@
       });
     }
     function filteredShowings(filters) {
+      const selected = new Set(filters.movieKeys || []);
       const items = showings.filter((showing) => {
         const cinema = cinemas.find((item) => item.id === showing.cinemaId);
         const queryMatch = cinemaTextMatches(cinema, filters.query) || !filters.query || showing.title.toLocaleLowerCase('zh-TW').includes(filters.query);
-        return showing.date === selectedDate && isUpcoming(showing) && queryMatch && (!filters.format || showing.format === filters.format) && withinCinemaFilters(cinema, filters);
+        return showing.date === selectedDate && isUpcoming(showing) && queryMatch && (!filters.format || showing.format === filters.format) && (!selected.size || selected.has(movieVersionKey(showing))) && withinCinemaFilters(cinema, filters);
       });
       return sortScreenings(items, sortSelect.value);
     }
@@ -463,6 +482,7 @@
       document.getElementById('date-picker').value=selectedDate;
       document.querySelectorAll('.date-button').forEach(item=>item.setAttribute('aria-pressed',String(item.dataset.date===selectedDate)));
       const filters = currentFilters();
+      renderMoviePicker(filters);
       $('#sort-control').classList.toggle('hidden', selectedView !== 'screenings');
       $('#sort-note').classList.toggle('hidden', selectedView !== 'screenings');
       renderShowings(filters);
@@ -490,6 +510,46 @@
       }
       document.querySelectorAll('[data-view]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.view === selectedView)));
     }
+    function movieChoices(filters) {
+      const choices = new Map();
+      filteredShowings({...filters, query: '', movieKeys: []}).forEach(row => {
+        const key = movieVersionKey(row);
+        choices.set(key, {key, title: row.title, format: row.format, count: (choices.get(key)?.count || 0) + 1});
+      });
+      (filters.movieKeys || []).forEach(key => {
+        if (choices.has(key)) return;
+        try { const pair = JSON.parse(key); if (Array.isArray(pair) && pair.length === 2 && pair.every(value => typeof value === 'string')) choices.set(key, {key, title: pair[0], format: pair[1], count: 0}); } catch {}
+      });
+      const collator = new Intl.Collator('zh-TW', {numeric: true, sensitivity: 'variant'});
+      return [...choices.values()].sort((a,b) => collator.compare(a.title,b.title) || collator.compare(a.format,b.format) || a.key.localeCompare(b.key));
+    }
+    function movieChoiceHtml(choice) {
+      return `<label class="movie-choice"><input type="checkbox" name="movie-versions" data-movie-key="${esc(choice.key)}" value="${esc(choice.key)}" ${selectedMovieKeys.includes(choice.key) ? 'checked' : ''}><span><strong>${esc(choice.title)}</strong><small>${esc(choice.format)}</small><small>${choice.count ? choice.count+' 個場次' : '此篩選下暫無未開演場次'}</small></span></label>`;
+    }
+    function renderMoviePicker(filters) {
+      const list = $('#movie-options');
+      const choices = movieChoices(filters);
+      $('#movie-selection-status').textContent = selectedMovieKeys.length ? `已勾選 ${selectedMovieKeys.length} 部電影版本` : '全部電影／版本';
+      const signature = JSON.stringify(choices);
+      if (list.dataset.signature !== signature) {
+        const active = document.activeElement;
+        const focusedKey = active && list.contains(active) ? active.getAttribute('data-movie-key') : null;
+        list.innerHTML = choices.map(movieChoiceHtml).join('') || '<p class="movie-picker-note">此日期或篩選下暫無可選電影，請更換日期或放寬篩選。</p>';
+        list.dataset.signature = signature;
+        if (focusedKey) {
+          const restored = [...list.querySelectorAll('input[data-movie-key]')].find(input => input.value === focusedKey);
+          (restored || $('#movie-picker summary')).focus({preventScroll: true});
+        }
+      }
+      list.querySelectorAll('input[data-movie-key]').forEach(input => { input.checked = selectedMovieKeys.includes(input.value); });
+    }
+    $('#movie-options').addEventListener('change', event => {
+      const input = event.target;
+      if (!input.matches('input[data-movie-key]')) return;
+      selectedMovieKeys = input.checked ? [...new Set([...selectedMovieKeys, input.value])] : selectedMovieKeys.filter(key => key !== input.value);
+      render();
+    });
+    $('#movie-clear').addEventListener('click', () => { selectedMovieKeys = []; render(); });
     document.querySelectorAll('[data-view]').forEach((button) => button.addEventListener('click', () => {
       selectedView = button.dataset.view;
       render();
@@ -499,7 +559,7 @@
     [cinemaSelect, districtSelect, formatSelect].forEach((control) => control.addEventListener('change', render));
     sortSelect.addEventListener('change', render);
     $('#clear').addEventListener('click', () => {
-      queryInput.value = ''; cinemaSelect.value = ''; districtSelect.value = ''; formatSelect.value = ''; render(); queryInput.focus();
+      queryInput.value = ''; cinemaSelect.value = ''; districtSelect.value = ''; formatSelect.value = ''; selectedMovieKeys = []; render(); queryInput.focus();
     });
     const picker=document.getElementById('date-picker'); picker.value=selectedDate; picker.min=taipeiTodayKey; picker.max=addDateKeyDays(taipeiTodayKey,180); picker.addEventListener('change',function(){if(/^\d{4}-\d{2}-\d{2}$/.test(picker.value)){selectedDate=picker.value;render();}});
     const stamp = value => value ? new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(value)) : '尚無成功資料';
