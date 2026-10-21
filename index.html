@@ -215,7 +215,7 @@
         <aside class="filters" aria-labelledby="filter-title">
           <h2 id="filter-title">縮小選擇</h2>
           <div class="filter-controls">
-            <details class="movie-picker" id="movie-picker"><summary>選擇電影（可多選）<span id="movie-selection-status">全部電影／版本</span></summary><div class="movie-picker-body"><button class="movie-clear" id="movie-clear" type="button">取消電影勾選</button><p class="movie-picker-note">直接勾選片名即可。不同版本分開選擇，未勾選時顯示全部。</p><div class="movie-options" id="movie-options" role="group" aria-label="選擇電影與版本"></div></div></details>
+            <details class="movie-picker" id="movie-picker"><summary>選擇電影（可多選）<span id="movie-selection-status">全部電影／版本</span></summary><div class="movie-picker-body"><button class="movie-clear" id="movie-clear" type="button">取消電影勾選</button><p class="movie-picker-note">列出已取得資料中所有日期、影城與版本的電影；場次數依目前日期及篩選條件計算。可多選，未勾選時顯示全部。</p><div class="movie-options" id="movie-options" role="group" aria-label="選擇電影與版本"></div></div></details>
             <label class="field query-field"><span>關鍵字搜尋（選填）</span><input id="query" type="search" placeholder="片名可直接勾選；也可搜尋影城或地址" autocomplete="off"></label>
             <label class="field"><span>行政區</span><select id="district"><option value="">全部行政區</option></select></label>
             <label class="field"><span>影城</span><select id="cinema"><option value="">全部追蹤影城</option></select></label>
@@ -512,6 +512,12 @@
     }
     function movieChoices(filters) {
       const choices = new Map();
+      const cinemaIds = new Set(cinemas.map(cinema => cinema.id));
+      showings.forEach(row => {
+        if (!cinemaIds.has(row.cinemaId)) return;
+        const key = movieVersionKey(row);
+        choices.set(key, {key, title: row.title, format: row.format, count: 0});
+      });
       filteredShowings({...filters, query: '', movieKeys: []}).forEach(row => {
         const key = movieVersionKey(row);
         choices.set(key, {key, title: row.title, format: row.format, count: (choices.get(key)?.count || 0) + 1});
@@ -524,7 +530,7 @@
       return [...choices.values()].sort((a,b) => collator.compare(a.title,b.title) || collator.compare(a.format,b.format) || a.key.localeCompare(b.key));
     }
     function movieChoiceHtml(choice) {
-      return `<label class="movie-choice"><input type="checkbox" name="movie-versions" data-movie-key="${esc(choice.key)}" value="${esc(choice.key)}" ${selectedMovieKeys.includes(choice.key) ? 'checked' : ''}><span><strong>${esc(choice.title)}</strong><small>${esc(choice.format)}</small><small>${choice.count ? choice.count+' 個場次' : '此篩選下暫無未開演場次'}</small></span></label>`;
+      return `<label class="movie-choice"><input type="checkbox" name="movie-versions" data-movie-key="${esc(choice.key)}" value="${esc(choice.key)}" ${selectedMovieKeys.includes(choice.key) ? 'checked' : ''}><span><strong>${esc(choice.title)}</strong><small>${esc(choice.format)}</small><small>${choice.count ? '此日期／篩選：'+choice.count+' 個場次' : '此日期／篩選暫無未開演場次'}</small></span></label>`;
     }
     function renderMoviePicker(filters) {
       const list = $('#movie-options');
@@ -534,7 +540,7 @@
       if (list.dataset.signature !== signature) {
         const active = document.activeElement;
         const focusedKey = active && list.contains(active) ? active.getAttribute('data-movie-key') : null;
-        list.innerHTML = choices.map(movieChoiceHtml).join('') || '<p class="movie-picker-note">此日期或篩選下暫無可選電影，請更換日期或放寬篩選。</p>';
+        list.innerHTML = choices.map(movieChoiceHtml).join('') || '<p class="movie-picker-note">尚未取得電影資料，請更新場次後再試。</p>';
         list.dataset.signature = signature;
         if (focusedKey) {
           const restored = [...list.querySelectorAll('input[data-movie-key]')].find(input => input.value === focusedKey);
