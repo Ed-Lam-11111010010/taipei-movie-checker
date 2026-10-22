@@ -110,15 +110,15 @@
     .address { margin: 4px 0 0 18px; color: var(--muted); font-size: 10px; }
     .screening-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; min-width: 115px; }
     .time { font-size: 23px; font-weight: 750; letter-spacing: -.06em; font-variant-numeric: tabular-nums; }
-    .action-link { display: inline-flex; justify-content: center; align-items: center; gap: 5px; padding: 8px 10px; border-radius: 6px; background: var(--acid); color: var(--ink); font-size: 10px; font-weight: 800; text-decoration: none; }
+    .action-link { display: inline-flex; width: 100%; min-height: 36px; box-sizing: border-box; justify-content: center; align-items: center; gap: 5px; padding: 8px 10px; border-radius: 6px; background: var(--acid); color: var(--ink); font-size: 10px; font-weight: 800; text-decoration: none; }
     .map-quick-link { color: var(--muted); font-size: 10px; text-underline-offset: 3px; }
     .venue-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
-    .venue-card { padding: 17px; border: 1px solid var(--line); border-radius: 11px; background: var(--card); }
+    .venue-card { display: flex; flex-direction: column; padding: 17px; border: 1px solid var(--line); border-radius: 11px; background: var(--card); }
     .venue-kicker { color: var(--purple); font-size: 9px; font-weight: 800; letter-spacing: .1em; }
     .venue-card h3 { margin: 7px 0; font: 500 20px var(--serif); }
-    .venue-card p { min-height: 32px; margin: 0 0 14px; color: var(--muted); font-size: 11px; line-height: 1.55; }
-    .venue-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-    .venue-actions a, .venue-actions button { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink); font-size: 10px; text-decoration: none; cursor: pointer; }
+    .venue-card p { flex: 1; min-height: 32px; margin: 0 0 14px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .venue-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: auto; }
+    .venue-actions a, .venue-actions button { display: inline-flex; width: 100%; min-height: 36px; box-sizing: border-box; align-items: center; justify-content: center; padding: 8px 6px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--ink); font-size: 10px; text-align: center; text-decoration: none; cursor: pointer; }
     .venue-actions .map-link { border-color: var(--ink); background: var(--ink); color: white; }
     .map-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(220px, .65fr); min-height: 460px; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
     .map-destination { display: flex; flex-direction: column; align-items: stretch; min-height: 460px; padding: 24px; background: #e8e6dc; }
@@ -470,7 +470,7 @@
             <div class="cinema-row"><span class="pin" aria-hidden="true">⌖</span>${esc(cinema.name)}</div>
             <p class="address">${esc(cinema.address)}</p>
           </div>
-          <div class="screening-actions"><time class="screening-date" datetime="${esc(item.date)}">${esc(item.date)}（${dateLabel(item.date, {weekday: 'short'})}）</time><span class="time">${esc(item.time)}</span><a class="action-link" href="${esc(bookingPage || cinema.bookingUrl || item.sourceUrl || filmPage || cinema.schedules)}" title="${esc(bookingPage ? `訂購《${item.title}》${item.date} ${item.time} ${item.format}` : cinema.bookingUrl ? '前往官方訂票系統，請選擇影城與場次' : item.sourceUrl?.startsWith('https://www.atmovies.com.tw/') ? '在開眼電影網查看此影城當日場次' : '此場次未提供有效訂票連結，查看官方場次')}" target="_blank" rel="noopener noreferrer">${bookingPage ? '官方場次・訂票 ↗' : cinema.bookingUrl ? '官方訂票・選場次 ↗' : item.sourceUrl?.startsWith('https://www.atmovies.com.tw/') ? '開眼場次 ↗' : '官方場次 ↗'}</a><a class="map-quick-link" href="${mapsSearch(cinema)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a></div>
+          <div class="screening-actions"><time class="screening-date" datetime="${esc(item.date)}">${esc(item.date)}（${dateLabel(item.date, {weekday: 'short'})}）</time><span class="time">${esc(item.time)}</span><a class="action-link" href="${esc(bookingPage || cinema.bookingUrl || item.sourceUrl || filmPage || cinema.schedules)}" title="${esc(bookingPage ? `訂購《${item.title}》${item.date} ${item.time} ${item.format}` : cinema.bookingUrl ? '前往官方訂票系統，請選擇影城與場次' : item.sourceUrl?.startsWith('https://www.atmovies.com.tw/') ? '在開眼電影網查看此影城當日場次' : '此場次未提供有效訂票連結，查看官方場次')}" target="_blank" rel="noopener noreferrer">查看場次</a><a class="map-quick-link" href="${mapsSearch(cinema)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a></div>
         </article>`;
       }).join('');
       list.querySelectorAll('.poster img').forEach((img) => img.addEventListener('error', () => img.remove(), {once: true}));
@@ -481,7 +481,7 @@
       const items = filteredCinemas(filters);
       list.innerHTML = items.map((cinema) => {
         const count = filteredShowings(filters).filter((showing) => showing.cinemaId === cinema.id).length;
-        return `<article class="venue-card"><span class="venue-kicker">${esc(cinema.chain)} · ${esc(cinema.district)}</span><h3>${esc(cinema.name)}</h3><p>${esc(cinema.address)}<br>${filters.movieKeys.length ? '所有日期' : '選定日期'}取得 ${count} 個場次；詳見來源狀態。</p><div class="venue-actions"><a class="map-link" href="${mapsSearch(cinema)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a><a href="${esc(cinema.official)}" target="_blank" rel="noopener noreferrer">影城資訊 ↗</a><a href="${esc(cinema.schedules)}" target="_blank" rel="noopener noreferrer">${cinema.schedules.startsWith('https://www.atmovies.com.tw/') ? '開眼場次 ↗' : '官方場次 ↗'}</a></div></article>`;
+        return `<article class="venue-card"><span class="venue-kicker">${esc(cinema.chain)} · ${esc(cinema.district)}</span><h3>${esc(cinema.name)}</h3><p>${esc(cinema.address)}<br>${filters.movieKeys.length ? '所有日期' : '選定日期'}取得 ${count} 個場次；詳見來源狀態。</p><div class="venue-actions"><a class="map-link" href="${mapsSearch(cinema)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a><a href="${esc(cinema.official)}" target="_blank" rel="noopener noreferrer">影城資訊 ↗</a><a href="${esc(cinema.schedules)}" target="_blank" rel="noopener noreferrer">查看場次</a></div></article>`;
       }).join('');
       list.classList.toggle('hidden', selectedView !== 'cinemas');
     }
