@@ -175,22 +175,41 @@
       footer p { margin: 6px 0; }
     }
   
-    .live-source-section { margin: 26px 0 38px; padding: 28px; border: 1px solid var(--line); background: #fffefa; border-radius: 18px; }
-    .live-source-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
-    .live-source-heading h2 { margin: 0; font: 500 clamp(25px,3.5vw,38px)/1.2 var(--serif); letter-spacing: -.035em; }
-    .live-source-heading p:last-child { max-width: 525px; margin: 0; font-size: 13px; line-height: 1.7; color: var(--muted); }
-    .live-cinema-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
-    .live-cinema-card { display: flex; flex-direction: column; min-width: 0; padding: 17px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; }
+    .live-source-section { margin: 26px 0 36px; padding: 24px; border: 1px solid var(--line); background: #fffefa; border-radius: 18px; }
+    .live-source-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+    .live-source-heading h2 { margin: 0; font: 500 clamp(23px,3.4vw,34px)/1.2 var(--serif); letter-spacing: -.035em; }
+    .live-source-heading p:last-child { max-width: 540px; margin: 0; font-size: 13px; line-height: 1.7; color: var(--muted); }
+    .cinema-source-accordion { display: grid; gap: 9px; }
+    .cinema-source-group { border: 1px solid var(--line); border-radius: 12px; background: var(--paper); overflow: hidden; }
+    .cinema-source-group > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 17px; cursor: pointer; list-style: none; }
+    .cinema-source-group > summary::-webkit-details-marker { display: none; }
+    .cinema-source-group > summary:hover { background: #edeadd; }
+    .cinema-source-group > summary:focus-visible { outline: 3px solid var(--purple); outline-offset: -3px; }
+    .cinema-source-summary-main { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .cinema-source-dot { width: 11px; height: 11px; border-radius: 50%; background: var(--purple); flex: none; box-shadow: 0 0 0 4px #e1daf7; }
+    .cinema-source-summary-text { display: flex; flex-direction: column; gap: 4px; }
+    .cinema-source-summary-text strong { font-size: 15px; }
+    .cinema-source-summary-text small { color: var(--muted); font-size: 11px; }
+    .cinema-source-action { display: flex; align-items: center; gap: 10px; color: var(--purple); font-weight: 700; font-size: 12px; white-space: nowrap; }
+    .cinema-source-chevron { display: inline-block; font-size: 20px; line-height: 1; transition: transform .15s ease; }
+    .cinema-source-group[open] .cinema-source-chevron { transform: rotate(180deg); }
+    .cinema-source-group[open] { background: #fffefa; }
+    .cinema-source-group[open] > summary { border-bottom: 1px solid var(--line); }
+    .live-cinema-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; padding: 14px; }
+    .live-cinema-card { display: flex; flex-direction: column; min-width: 0; padding: 15px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
     .live-cinema-meta { color: var(--purple); font-size: 11px; font-weight: 700; }
-    .live-cinema-card h3 { font-size: 16px; margin: 10px 0 7px; line-height: 1.4; }
+    .live-cinema-card h4 { font-size: 15px; margin: 9px 0 7px; line-height: 1.4; }
     .live-cinema-card p { font-size: 12px; line-height: 1.6; color: var(--muted); margin: 0 0 13px; }
     .live-cinema-card a { margin-top: auto; display: inline-flex; width: fit-content; padding: 9px 12px; font-size: 12px; font-weight: 800; background: var(--ink); color: var(--acid); border-radius: 8px; text-decoration: none; }
     .live-cinema-card a:hover { text-decoration: underline; }
+    
+    @media (max-width: 600px) { .live-source-section { padding: 16px; } .live-cinema-grid { grid-template-columns: 1fr; padding: 10px; } .cinema-source-group > summary { padding: 14px; } .cinema-source-action-label { display: none; } }
+    
     .demo-section-title { margin: 35px 0 0; padding-top: 20px; border-top: 1px solid var(--line); }
     .demo-section-title h2 { font: 500 27px/1.2 var(--serif); margin: 0 0 7px; }
     .demo-section-title p { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 0; }
     @media (max-width: 920px) { .live-cinema-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .live-source-heading { display: block; } .live-source-heading p:last-child { margin-top: 12px; } }
-    @media (max-width: 600px) { .live-source-section { padding: 17px; } .live-cinema-grid { grid-template-columns: 1fr; } }
+    
 
   </style>
 <meta name="movie-checker-hosting" content="snapshot"></head>
@@ -224,24 +243,31 @@
 
       
 <section class="live-source-section" id="live-showtimes" aria-labelledby="live-showtimes-title">
-  <div class="live-source-heading">
-    <div><p class="eyebrow">REAL SHOWTIMES · 官方來源</p><h2 id="live-showtimes-title">查看真實上映場次</h2></div>
-    <p>以下連結直接開啟各戲院的官方網站，欣欣秀泰使用開眼電影網。<strong>場次以來源網頁當下公布為準</strong>；本站尚未執行自動同步，並不聲稱這些場次已擷取到本站。</p>
-  </div>
-  <div class="live-cinema-grid"><article class="live-cinema-card"><span class="live-cinema-meta">威秀影城 · 信義區</span><h3>台北信義威秀影城</h3><p>台北市信義區松壽路20號</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=1" target="_blank" rel="noopener noreferrer" aria-label="前往台北信義威秀影城威秀官方影城查看最新場次">查看最新場次 ↗</a></article>
-<article class="live-cinema-card"><span class="live-cinema-meta">威秀影城 · 大同區</span><h3>台北京站威秀影城</h3><p>台北市大同區市民大道一段209號5樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=2" target="_blank" rel="noopener noreferrer" aria-label="前往台北京站威秀影城威秀官方影城查看最新場次">查看最新場次 ↗</a></article>
-<article class="live-cinema-card"><span class="live-cinema-meta">秀泰影城 · 中山區</span><h3>台北欣欣秀泰影城</h3><p>台北市中山區林森北路247號</p><a href="https://www.atmovies.com.tw/showtime/t02d03/a02/" target="_blank" rel="noopener noreferrer" aria-label="前往台北欣欣秀泰影城開眼電影網場次查看最新場次">查看最新場次 ↗</a></article>
-<article class="live-cinema-card"><span class="live-cinema-meta">國賓影城 · 中山區</span><h3>台北長春國賓影城</h3><p>台北市中山區長春路176號</p><a href="https://www.ambassador.com.tw/home/Showtime?ID=453b2966-f7c2-44a9-b2eb-687493855d0e" target="_blank" rel="noopener noreferrer" aria-label="前往台北長春國賓影城國賓官方場次查看最新場次">查看最新場次 ↗</a></article>
-<article class="live-cinema-card"><span class="live-cinema-meta">威秀影城 · 信義區</span><h3>MUVIE CINEMAS 台北松仁</h3><p>台北市信義區松仁路58號10樓（遠百信義A13）</p><a href="https://www.vscinemas.com.tw/theater/detail2.aspx?id=23" target="_blank" rel="noopener noreferrer" aria-label="前往MUVIE CINEMAS 台北松仁威秀官方影城查看最新場次">查看最新場次 ↗</a></article>
-<article class="live-cinema-card"><span class="live-cinema-meta">威秀影城 · 南港區</span><h3>台北南港LaLaport威秀影城</h3><p>台北市南港區經貿二路131號5樓（南港LaLaport購物中心）</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=34" target="_blank" rel="noopener noreferrer" aria-label="前往台北南港LaLaport威秀影城威秀官方影城查看最新場次">查看最新場次 ↗</a></article>
-<article class="live-cinema-card"><span class="live-cinema-meta">威秀影城 · 萬華區</span><h3>台北西門威秀影城</h3><p>台北市萬華區漢中街52號8-11樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=31" target="_blank" rel="noopener noreferrer" aria-label="前往台北西門威秀影城威秀官方影城查看最新場次">查看最新場次 ↗</a></article>
-<article class="live-cinema-card"><span class="live-cinema-meta">國賓影城 · 萬華區</span><h3>國賓大戲院</h3><p>台北市萬華區成都路88號</p><a href="https://www.ambassador.com.tw/home/Showtime?ID=84b87b82-b936-4a39-b91f-e88328d33b4e" target="_blank" rel="noopener noreferrer" aria-label="前往國賓大戲院國賓官方場次查看最新場次">查看最新場次 ↗</a></article>
-<article class="live-cinema-card"><span class="live-cinema-meta">威秀影城 · 新北市板橋區</span><h3>板橋大遠百威秀影城</h3><p>新北市板橋區新站路28號10樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=4" target="_blank" rel="noopener noreferrer" aria-label="前往板橋大遠百威秀影城威秀官方影城查看最新場次">查看最新場次 ↗</a></article>
-<article class="live-cinema-card"><span class="live-cinema-meta">威秀影城 · 新北市新店區</span><h3>新店裕隆城威秀影城</h3><p>新北市新店區中興路三段70號7樓（新店裕隆城）</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=28" target="_blank" rel="noopener noreferrer" aria-label="前往新店裕隆城威秀影城威秀官方影城查看最新場次">查看最新場次 ↗</a></article>
-<article class="live-cinema-card"><span class="live-cinema-meta">威秀影城 · 新北市中和區</span><h3>中和環球威秀影城</h3><p>新北市中和區中山路三段122號4樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=25" target="_blank" rel="noopener noreferrer" aria-label="前往中和環球威秀影城威秀官方影城查看最新場次">查看最新場次 ↗</a></article>
-<article class="live-cinema-card"><span class="live-cinema-meta">威秀影城 · 新北市林口區</span><h3>林口MITSUI OUTLET PARK威秀影城</h3><p>新北市林口區文化三路一段356號3樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=5" target="_blank" rel="noopener noreferrer" aria-label="前往林口MITSUI OUTLET PARK威秀影城威秀官方影城查看最新場次">查看最新場次 ↗</a></article></div>
-</section>
-<div class="demo-section-title"><h2>網站介面測試</h2><p>以下電影及場次均為虛構範例，僅供操作搜尋、篩選、日期及排序功能；不能用於訂票。</p></div>
+ <div class="live-source-heading"><div><p class="eyebrow">SOURCE LINKS · 影城資訊</p><h2 id="live-showtimes-title">電影院官方網址</h2></div>
+ <p>按下影城集團名稱即可展開各戲院場次網址。外部頁面提供最新公布資訊；本站目前仍顯示<strong>虛構測試場次，尚未完成真實場次同步</strong>。</p></div>
+ <div class="cinema-source-accordion" aria-label="依影城集團展開網址"><details class="cinema-source-group">
+ <summary><span class="cinema-source-summary-main"><span class="cinema-source-dot" aria-hidden="true"></span><span class="cinema-source-summary-text"><strong>威秀影城</strong><small>9 間影城 · 台北、新北</small></span></span><span class="cinema-source-action"><span class="cinema-source-action-label">顯示影城網址</span><span class="cinema-source-chevron" aria-hidden="true">⌄</span></span></summary>
+ <div class="live-cinema-grid"><article class="live-cinema-card"><span class="live-cinema-meta">信義區</span><h4>台北信義威秀影城</h4><p>台北市信義區松壽路20號</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=1" target="_blank" rel="noopener noreferrer" aria-label="開啟台北信義威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">大同區</span><h4>台北京站威秀影城</h4><p>台北市大同區市民大道一段209號5樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=2" target="_blank" rel="noopener noreferrer" aria-label="開啟台北京站威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">信義區</span><h4>MUVIE CINEMAS 台北松仁</h4><p>台北市信義區松仁路58號10樓（遠百信義A13）</p><a href="https://www.vscinemas.com.tw/theater/detail2.aspx?id=23" target="_blank" rel="noopener noreferrer" aria-label="開啟MUVIE CINEMAS 台北松仁的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">南港區</span><h4>台北南港LaLaport威秀影城</h4><p>台北市南港區經貿二路131號5樓（南港LaLaport購物中心）</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=34" target="_blank" rel="noopener noreferrer" aria-label="開啟台北南港LaLaport威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">萬華區</span><h4>台北西門威秀影城</h4><p>台北市萬華區漢中街52號8-11樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=31" target="_blank" rel="noopener noreferrer" aria-label="開啟台北西門威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">新北市板橋區</span><h4>板橋大遠百威秀影城</h4><p>新北市板橋區新站路28號10樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=4" target="_blank" rel="noopener noreferrer" aria-label="開啟板橋大遠百威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">新北市新店區</span><h4>新店裕隆城威秀影城</h4><p>新北市新店區中興路三段70號7樓（新店裕隆城）</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=28" target="_blank" rel="noopener noreferrer" aria-label="開啟新店裕隆城威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">新北市中和區</span><h4>中和環球威秀影城</h4><p>新北市中和區中山路三段122號4樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=25" target="_blank" rel="noopener noreferrer" aria-label="開啟中和環球威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">新北市林口區</span><h4>林口MITSUI OUTLET PARK威秀影城</h4><p>新北市林口區文化三路一段356號3樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=5" target="_blank" rel="noopener noreferrer" aria-label="開啟林口MITSUI OUTLET PARK威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article></div>
+ </details>
+<details class="cinema-source-group">
+ <summary><span class="cinema-source-summary-main"><span class="cinema-source-dot" aria-hidden="true"></span><span class="cinema-source-summary-text"><strong>國賓影城</strong><small>2 間影城 · 台北</small></span></span><span class="cinema-source-action"><span class="cinema-source-action-label">顯示影城網址</span><span class="cinema-source-chevron" aria-hidden="true">⌄</span></span></summary>
+ <div class="live-cinema-grid"><article class="live-cinema-card"><span class="live-cinema-meta">中山區</span><h4>台北長春國賓影城</h4><p>台北市中山區長春路176號</p><a href="https://www.ambassador.com.tw/home/Showtime?ID=453b2966-f7c2-44a9-b2eb-687493855d0e" target="_blank" rel="noopener noreferrer" aria-label="開啟台北長春國賓影城的國賓官方場次頁">國賓官方場次頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">萬華區</span><h4>國賓大戲院</h4><p>台北市萬華區成都路88號</p><a href="https://www.ambassador.com.tw/home/Showtime?ID=84b87b82-b936-4a39-b91f-e88328d33b4e" target="_blank" rel="noopener noreferrer" aria-label="開啟國賓大戲院的國賓官方場次頁">國賓官方場次頁 ↗</a></article></div>
+ </details>
+<details class="cinema-source-group">
+ <summary><span class="cinema-source-summary-main"><span class="cinema-source-dot" aria-hidden="true"></span><span class="cinema-source-summary-text"><strong>秀泰影城</strong><small>1 間影城 · 欣欣秀泰</small></span></span><span class="cinema-source-action"><span class="cinema-source-action-label">顯示影城網址</span><span class="cinema-source-chevron" aria-hidden="true">⌄</span></span></summary>
+ <div class="live-cinema-grid"><article class="live-cinema-card"><span class="live-cinema-meta">中山區</span><h4>台北欣欣秀泰影城</h4><p>台北市中山區林森北路247號</p><a href="https://www.atmovies.com.tw/showtime/t02d03/a02/" target="_blank" rel="noopener noreferrer" aria-label="開啟台北欣欣秀泰影城的開眼電影網場次頁">開眼電影網場次頁 ↗</a></article></div>
+ </details></div>
+ </section>
+ <div class="demo-section-title"><h2>網站介面測試</h2><p>以下電影及場次均為虛構範例，僅供操作搜尋、篩選、日期及排序功能；不能用於訂票。</p></div>
 
       <section class="toolbar" aria-label="日期與檢視方式">
         <div id="date-strip" class="date-strip" role="group" aria-label="選擇觀影日期"></div>
