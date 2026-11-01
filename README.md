@@ -1,7 +1,13 @@
-# Taipei Movie Checker
+# Taipei Movie Checker — 測試部署 (Synthetic Preview)
 
-Static preview of publicly available Taipei and nearby New Taipei cinema showtimes. Movie posters and film links point to listed cinema or schedule sources. Sessions are sorted by start time; started sessions are hidden using Taipei time.
+本 GitHub Pages 版本只用於測試網站操作。**全部電影片名、場次時間和電影版本組合均為虛構測試資料**，不是實際戲院公告，請勿以此訂票或安排行程。
 
-This repository contains website output only. No local settings, credentials, project notes, or backend source are included.
+- 測試日期：2026-11-01 至 2026-11-14（Asia/Taipei）
+- 測試場次：672 筆；覆蓋 12 個影城資訊項目
+- 原本 Movie Checker 靜態頁面介面保留，包括電影搜尋、多選、時間排序、影城資訊與地圖
+- 不連線擷取官方場次、不啟用 Windows 排程、不提供虛構場次的訂票連結
+- GitHub Pages 的「更新場次」只會重新下載這份靜態測試資料
 
-The refresh button loads the latest published snapshot. Cinema-source synchronization is not scheduled on this website. Always check the displayed source timestamp and the linked source pages for changes.
+影城位置、名稱與一般官方網站連結為參考資訊，不代表影城確認本文所列測試電影或場次。
+
+此部署刻意使用獨立的模擬資料，不代表正式場次已通過發布流程；正式資料仍必須通過來源條件、同步收據、新鮮度與發布範圍驗證後，才可另外發布。此版本沒有改變本機自動發布設定。
