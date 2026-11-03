@@ -222,7 +222,7 @@
       </a>
       <div class="top-links">
         <a href="#live-showtimes">真實場次入口</a>
-        <a href="#screening-view">測試場次</a>
+        <a href="#screening-view">電影場次</a>
         <span class="demo-label">TEST PREVIEW · SYNTHETIC DATA</span>
       </div>
     </header>
@@ -273,7 +273,7 @@
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
     <input id="personal-showtimes-file" type="file" accept=".csv,text/csv" aria-describedby="personal-import-help" style="max-width:100%;font:inherit;">
     <button id="personal-import-template" type="button" class="refresh-button">下載 CSV 範本</button>
-    <button id="personal-import-reset" type="button" class="refresh-button" disabled>恢復測試場次</button>
+    <button id="personal-import-reset" type="button" class="refresh-button" disabled>恢復已發布場次</button>
   </div>
   <details style="margin-top:12px;">
     <summary style="cursor:pointer;font-weight:700;">直接貼上 CSV 文字（不需選擇檔案）</summary>
@@ -284,7 +284,7 @@
   <p id="personal-import-help" style="margin:10px 0 0;font-size:13px;">CSV 欄位：cinemaId,title,date,time,format（台北時間）。支援本站追蹤的 12 間影城、最多 2,000 筆，來源連結使用網站現有的官方場次入口。</p>
   <p id="personal-import-status" role="status" aria-live="polite" style="margin:8px 0 0;font-weight:600;"></p>
 </section>
-<div class="demo-section-title"><h2>網站介面測試</h2><p>以下電影及場次均為虛構範例，僅供操作搜尋、篩選、日期及排序功能；不能用於訂票。</p></div>
+<div class="demo-section-title"><h2>電影場次查詢</h2><p>先讀取已發布的來源快照；顯示時會標示資料來源、查核狀態及台北時間。場次可能變更，訂票前請前往原站核對。</p></div>
 
       <section class="toolbar" aria-label="日期與檢視方式">
         <div id="date-strip" class="date-strip" role="group" aria-label="選擇觀影日期"></div>
@@ -315,9 +315,9 @@
             <div class="results-controls"><label class="sort-control" id="sort-control">排序<select id="sort-order" aria-describedby="sort-note"><option value="time">時間（最近開演）</option><option value="movie">電影（各版本分開）</option><option value="version">版本（各電影分開）</option></select></label><span id="result-count" class="result-count" aria-live="polite"></span></div>
           </div>
           <p class="sort-note" id="sort-note">同義版本合併選擇與計數，例如「數位(英)」與「數位‧英文版」統一為「數位（英語）」。不同語言、3D、特殊影廳及活動場保留區分；各場次仍顯示官方原始版本。</p>
-          <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="sync-time" role="status" aria-live="polite">讀取本機快照…</span><button type="button" class="refresh-button" id="refresh-catalog" aria-describedby="refresh-note">↻ 重新載入測試場次</button></div>
-          <div class="refresh-help hidden" id="refresh-help"><p>無法讀取線上快照。請確認網路後再試；現有場次會保留。</p></div>
-          <p class="sr-only" id="refresh-note">重新載入已上線的場次快照，保留目前篩選；不會即時向戲院抓取資料。</p>
+          <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="sync-time" role="status" aria-live="polite">讀取已發布的來源快照…</span><button type="button" class="refresh-button" id="refresh-catalog" aria-describedby="refresh-note">↻ 重新載入已發布場次</button><button type="button" class="refresh-button" id="toggle-demo-preview" aria-pressed="false">查看虛構測試資料</button></div>
+          <div class="refresh-help hidden" id="refresh-help"><p>無法讀取已發布的場次快照。請確認網路後再試；目前顯示的資料會保留。</p></div>
+          <p class="sr-only" id="refresh-note">重新載入 GitHub Pages 已發布的來源快照，保留目前篩選；資料由站點排程更新，不會從瀏覽器直接抓取影城。</p>
           <div id="source-health" class="filter-foot" style="white-space:pre-line;margin:0 0 16px"></div><label class="field" style="margin:0 0 16px"><span id="date-scope-note">其他日期（含預售場次）</span><input id="date-picker" type="date"></label><div id="screening-view" class="screening-list"></div>
           <div id="cinema-view" class="venue-list hidden"></div>
           <div id="map-layout" class="map-layout hidden">
@@ -331,7 +331,7 @@
 
     <footer>
       <p>Movie Checker · 個人非商業 POC · 台北電影場次查詢介面</p>
-      <p>本網站為功能測試版本；電影名稱及場次時間皆為虛構，不包含官方放映快照，也不提供實際訂票場次。</p>
+      <p>本站為個人非商業 POC。已載入來源快照時，場次仍可能更新或取消；請至原始影城場次頁核對。虛構測試資料另行標示。</p>
     </footer>
   </div>
 
@@ -356,6 +356,9 @@
     }
     let catalogue = rollingDemoCatalog(baseDemoCatalog);
     const publicDemoCatalog = baseDemoCatalog;
+    let latestPublicCatalog = catalogue;
+    let demoPreviewActive = false;
+    const sourceMode = () => !personalImportActive && catalogue.mode === 'source-snapshot';
     let personalImportActive = false;
     const originalDemoBanner = document.querySelector('.demo-banner div').innerHTML;
     const originalDemoDescription = document.querySelector('.demo-section-title p').textContent;
@@ -569,7 +572,7 @@
         return `${groupHeading}<article class="screening-card">
           ${posterHtml(item)}
           <div><h3 class="movie-title">${esc(item.title)}</h3>
-            <div class="movie-meta"><span class="tag">${esc(item.format)}</span><span class="tag">${personalImportActive ? "個人匯入 · 未經驗證" : "測試場次"}</span></div>
+            <div class="movie-meta"><span class="tag">${esc(item.format)}</span><span class="tag">${personalImportActive ? "個人匯入 · 未經驗證" : sourceMode() ? "來源快照 · 請於原站核對" : "虛構測試場次"}</span></div>
             <div class="cinema-row"><span class="pin" aria-hidden="true">⌖</span>${esc(cinema.name)}</div>
             <p class="address">${esc(cinema.address)}</p>
           </div>
@@ -693,14 +696,25 @@
     });
     const picker=document.getElementById('date-picker'); picker.value=selectedDate; picker.min=taipeiTodayKey; picker.max=addDateKeyDays(taipeiTodayKey,180); picker.addEventListener('change',function(){if(/^\d{4}-\d{2}-\d{2}$/.test(picker.value)){selectedDate=picker.value;render();}});
     const stamp = value => value ? new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(value)) : '尚無成功資料';
-    function renderSourceStatus(prefix = '測試快照（無來源同步）') {
+    function renderSourceStatus(prefix) {
+      const summary = document.getElementById('sync-time');
+      const detail = document.getElementById('source-health');
       if (personalImportActive) {
-        document.getElementById('sync-time').textContent = '個人匯入 ' + showings.length + ' 筆（僅此瀏覽器，非官方同步）';
-        document.getElementById('source-health').textContent = '此 CSV 的場次尚未經影城官方同步驗證；請使用官方場次連結核對。';
+        summary.textContent = '個人匯入 ' + showings.length + ' 筆（僅此瀏覽器，非官方同步）';
+        detail.textContent = '此 CSV 的場次尚未經影城官方同步驗證；請使用來源連結核對。';
         return;
       }
-      document.getElementById('sync-time').textContent=prefix+'・來源檢查時間：'+stamp(catalogue.checkedAt)+'（台北時間）';
-      document.getElementById('source-health').textContent=catalogue.sources.map(s => (cinemas.find(c=>c.id===s.cinemaId)?.name || s.cinemaId)+'：'+s.message+'（成功更新：'+stamp(s.lastSuccessAt)+'）').join('\n');
+      if (sourceMode()) {
+        const success = catalogue.sources.filter(s => s.state === 'ok' || (s.state === 'partial' && s.lastSuccessAt)).length;
+        const age = Date.now() - Date.parse(catalogue.checkedAt);
+        const stale = !Number.isFinite(age) || age < -15 * 60000 || age > 12 * 3600000;
+        summary.textContent = (prefix || '來源場次快照') + '・' + showings.length + ' 筆 / ' + success + ' 間影城・查核 ' + stamp(catalogue.checkedAt) + '（台北）' + (stale ? '・資料可能過期' : '');
+        detail.textContent = '只顯示已取得的場次，未取得不代表沒有放映。' + (stale ? '目前快照超過 12 小時或時間不明，請優先前往官方影城確認。\n' : '\n') +
+          catalogue.sources.map(s => (cinemas.find(c=>c.id===s.cinemaId)?.name || s.cinemaId) + '：' + s.message).join('\n');
+      } else {
+        summary.textContent = (prefix || '虛構測試快照') + '・僅用於介面測試（無影城同步）';
+        detail.textContent = '以下場次全部虛構；可點擊「重新載入已發布場次」查看來源快照。';
+      }
     }
     async function refreshCatalog() {
       const button = document.getElementById('refresh-catalog');
@@ -709,17 +723,21 @@
       button.textContent = '更新中…';
       button.setAttribute('aria-busy', 'true');
       document.getElementById('refresh-help').classList.add('hidden');
-      document.getElementById('sync-time').textContent = '正在載入測試場次，請稍候…';
+      document.getElementById('sync-time').textContent = '正在讀取已發布的來源快照…';
       try {
         const endpoint = hostedSnapshot ? './catalog.json' : location.protocol === 'file:' ? 'http://127.0.0.1:3001/api/catalog' : '/api/catalog';
         const response = await fetch(endpoint, { cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(120000) });
         if (!response.ok) throw new Error('更新服務暫時無法回應');
         const next = await response.json();
-        if (next.schemaVersion !== 1 || next.mode !== 'personal-local' || !Array.isArray(next.cinemas) || !Array.isArray(next.screenings) || !Array.isArray(next.sources) || !next.screenings.every(item => item.isDemo === true)) throw new Error('資料格式不符');
-        mostRecentDemoCatalog = next;
+        const validDemo = next.mode === 'personal-local' && next.screenings.every(item => item.isDemo === true);
+        const validSource = next.mode === 'source-snapshot' && next.screenings.every(item => item.isDemo === false && item.sourceUrl && /^https:\/\//.test(item.sourceUrl));
+        if (next.schemaVersion !== 1 || !Array.isArray(next.cinemas) || !Array.isArray(next.screenings) || !Array.isArray(next.sources) ||
+            !next.screenings.length || !(validDemo || validSource)) throw new Error('場次格式不正確，已保留原資料');
+        if (validDemo) mostRecentDemoCatalog = next;
         personalImportActive = false;
-        setPersonalMode(false);
-        catalogue = rollingDemoCatalog(next);
+        demoPreviewActive = false;
+        catalogue = validDemo ? rollingDemoCatalog(next) : next;
+        latestPublicCatalog = catalogue;
         cinemas = catalogue.cinemas.map(c => ({...c, official: c.officialUrl, schedules: c.showtimesUrl}));
         showings = catalogue.screenings;
         formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
@@ -728,15 +746,15 @@
         taipeiTodayKey = today;
         picker.min = today;
         picker.max = addDateKeyDays(today, 180);
+        setPersonalMode(false);
         buildDates(); buildFilters(); render();
-        const failed = next.sources.some(s => s.state === 'error' || s.state === 'partial');
-        renderSourceStatus(hostedSnapshot ? '已重新載入測試快照' : failed ? '已檢查；部分來源異常，保留可用資料' : '已讀取最新本機資料');
+        renderSourceStatus('已重新載入已發布場次');
       } catch (error) {
-        document.getElementById('sync-time').textContent = '更新失敗，保留目前資料。上次來源檢查：'+stamp(catalogue.checkedAt)+'（台北時間）。'+(hostedSnapshot ? '請確認網路，然後重試。' : '請確認本機服務及網路，然後重試。');
+        document.getElementById('sync-time').textContent = '讀取失敗，保留目前場次。最近快照：'+stamp(catalogue.checkedAt)+'（台北時間）。'+(hostedSnapshot ? '請確認網路，然後重試。' : '請確認本機服務及網路，然後重試。');
         document.getElementById('refresh-help').classList.remove('hidden');
       } finally {
         button.disabled = false;
-        button.textContent = '↻ 重新載入測試場次';
+        button.textContent = '↻ 重新載入已發布場次';
         button.removeAttribute('aria-busy');
       }
     }
@@ -799,15 +817,24 @@
       });
     }
     function setPersonalMode(active) {
+      const fromSources = !active && sourceMode();
       document.querySelector('.demo-banner div').innerHTML = active
-        ? '<b>個人場次預覽｜非官方同步</b>目前為使用者在此瀏覽器匯入的 CSV，來源與場次未經本站驗證，不能視為即時官方時刻。資料不會上傳到 GitHub。'
-        : originalDemoBanner;
+        ? '<b>個人場次預覽｜非官方同步</b>目前顯示此瀏覽器匯入的 CSV，資料不會上傳到 GitHub。請至原站核對。'
+        : fromSources
+          ? '<b>已載入來源場次快照｜不是即時訂票資料</b>目前顯示部分影城已核對的電影與時間，標示查核日期及來源；未成功取得的影城請點來源連結核對。'
+          : originalDemoBanner;
+      document.querySelector('.demo-section-title h2').textContent = fromSources ? '已取得的電影場次' : active ? '個人匯入場次' : '網站介面測試';
       document.querySelector('.demo-section-title p').textContent = active
-        ? '目前顯示個人匯入的場次，日期與時間採台北時間；請以來源網站為準。'
+        ? '目前顯示個人匯入的場次，未經網站驗證，日期與時間為台北時間。'
+        : fromSources ? '以下為已發布的部分影城來源快照（不是即時服務），點「查看場次」前往原站核對；其他影城仍可從上方來源入口前往查詢。'
         : originalDemoDescription;
       document.querySelector('footer p:last-child').textContent = active
-        ? '此瀏覽器暫時顯示個人匯入資料，並非官方同步場次。重新整理後會恢復原先虛構測試資料。'
-        : originalFooterDescription;
+        ? '此瀏覽器暫時顯示個人匯入的資料，並非官方同步；重新整理後會回到已發布的來源快照。'
+        : fromSources ? '本站資料來自來源網站的有限快照，實際日期、時刻與售票狀態請以各影城當下公告為準。' : originalFooterDescription;
+      document.querySelector('.demo-label').textContent = active ? 'PERSONAL CSV · UNVERIFIED' : fromSources ? 'SOURCE SNAPSHOT · PARTIAL' : 'TEST PREVIEW · SYNTHETIC DATA';
+      document.getElementById('toggle-demo-preview').textContent = demoPreviewActive ? '返回來源場次' : '查看虛構測試資料';
+      document.getElementById('toggle-demo-preview').setAttribute('aria-pressed', String(demoPreviewActive));
+      document.getElementById('toggle-demo-preview').disabled = active;
       document.getElementById('personal-import-reset').disabled = !active;
       document.getElementById('refresh-catalog').disabled = active;
     }
@@ -855,7 +882,8 @@
     });
     document.getElementById('personal-import-reset').addEventListener('click', () => {
       personalImportActive = false;
-      catalogue = rollingDemoCatalog(mostRecentDemoCatalog);
+      demoPreviewActive = false;
+      catalogue = latestPublicCatalog;
       cinemas = catalogue.cinemas.map(c => ({ ...c, official: c.officialUrl, schedules: c.showtimesUrl }));
       showings = catalogue.screenings;
       formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
@@ -863,7 +891,7 @@
       selectedDate = taipeiDateKey();
       setPersonalMode(false);
       buildDates(); buildFilters(); render(); renderSourceStatus();
-      document.getElementById('personal-import-status').textContent = '已恢復網站的虛構測試資料。';
+      document.getElementById('personal-import-status').textContent = '已恢復網站已發布的場次。';
     });
     document.getElementById('personal-import-template').addEventListener('click', () => {
       const sample = 'cinemaId,title,date,time,format\r\n' +
@@ -875,16 +903,30 @@
     });
 
     document.getElementById('refresh-catalog').addEventListener('click', refreshCatalog);
+    document.getElementById('toggle-demo-preview').addEventListener('click', () => {
+      if (personalImportActive) return;
+      demoPreviewActive = !demoPreviewActive;
+      catalogue = demoPreviewActive ? rollingDemoCatalog(publicDemoCatalog) : latestPublicCatalog;
+      cinemas = catalogue.cinemas.map(c => ({...c, official:c.officialUrl, schedules:c.showtimesUrl}));
+      showings = catalogue.screenings;
+      formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
+      selectedMovieKeys = [];
+      selectedDate = taipeiDateKey();
+      setPersonalMode(false);
+      buildDates(); buildFilters(); render(); renderSourceStatus();
+    });
+    setPersonalMode(false);
     renderSourceStatus();
     buildDates(); buildFilters(); render();
+    if (hostedSnapshot) refreshCatalog();
     function updateClock() {
       if (document.visibilityState !== 'visible') return;
       const today = taipeiDateKey();
       if (today !== taipeiTodayKey) {
         if (selectedDate <= taipeiTodayKey) selectedDate = today;
         taipeiTodayKey = today;
-        if (!personalImportActive) {
-          catalogue = rollingDemoCatalog(mostRecentDemoCatalog, today);
+        if (!personalImportActive && demoPreviewActive) {
+          catalogue = rollingDemoCatalog(publicDemoCatalog, today);
           showings = catalogue.screenings;
           renderSourceStatus();
         }
