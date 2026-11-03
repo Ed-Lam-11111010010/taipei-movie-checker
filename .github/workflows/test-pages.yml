@@ -1,0 +1,41 @@
+name: Validate four-page UI
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "index.html"
+      - "showtimes.html"
+      - "cinemas.html"
+      - "map.html"
+      - "app.css"
+      - "app-core.js"
+      - "demo-catalog.js"
+      - "movie-pages.css"
+      - "movie-pages.js"
+      - "scripts/test-pages.cjs"
+      - ".github/workflows/test-pages.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: movie-checker-ui-validation
+  cancel-in-progress: true
+
+jobs:
+  ui-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NODE_PATH: /tmp/movie-checker-ui-test/node_modules
+    steps:
+      - name: Checkout website
+        uses: actions/checkout@v4
+      - name: Configure Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install browser DOM test dependency
+        run: npm install --no-audit --no-fund --no-save --prefix /tmp/movie-checker-ui-test jsdom@26.1.0
+      - name: Exercise Movies, Showtimes, Cinemas and Map
+        run: node scripts/test-pages.cjs
