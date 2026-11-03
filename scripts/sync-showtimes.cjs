@@ -13,6 +13,19 @@ const maximumDate = addDays(today, 30);
 const validTime = /^([01]\d|2[0-3]):[0-5]\d$/;
 const seen = new Set();
 const output = [];
+// Alternate publicly readable theater-specific schedule pages. Used only if the Vieshow site blocks GitHub Actions.
+const atmoviesFallback = {
+  'vieshow-xinyi': ['t02a01', '台北信義威秀'],
+  'vieshow-qsquare': ['t02b14', '台北京站威秀'],
+  'vieshow-muvie': ['t02a11', 'MUVIE CINEMAS台北松仁威秀'],
+  'vieshow-nangang': ['t02a12', '台北南港LaLaport威秀影城'],
+  'vieshow-ximen': ['t02b08', '台北西門威秀影城'],
+  'vieshow-banqiao': ['t02e07', '板橋大遠百威秀影城'],
+  'vieshow-xindian': ['t02e21', '新店裕隆城威秀影城'],
+  'vieshow-zhonghe': ['t02e20', '中和環球威秀影城'],
+  'vieshow-linkou': ['t02e12', '林口三井OUTLET威秀影城'],
+  'showtime-xinxin': ['t02d03', '欣欣秀泰影城']
+};
 function textMd(html) { return converter.turndown(html).replace(/\r/g, ''); }
 function record(cinema, businessDate, title, format, time, sourceUrl) {
   title = String(title || '').replace(/\s+/g, ' ').trim();
@@ -85,6 +98,8 @@ function parseAmbassador(md, cinema, date, url) {
   if (matched < 1) throw new Error('No Ambassador showtimes');
 }
 function parseAtmovies(md, cinema, date, url) {
+  const expected = atmoviesFallback[cinema.id];
+  if (!expected || !md.includes(expected[1])) throw new Error('atmovies cinema identity does not match');
   const marker = '### ' + date.replaceAll('-', '/');
   const start = md.indexOf(marker);
   if (start < 0) throw new Error('No atmovies date heading');
@@ -123,7 +138,13 @@ async function run() {
   for (const cinema of previous.cinemas) {
     let error = null, dates = [], before = output.length;
     const urls = [];
-    if (cinema.id.startsWith('vieshow-')) urls.push([today, cinema.officialUrl, 'vieshow']);
+    if (cinema.id.startsWith('vieshow-')) {
+      urls.push([today, cinema.officialUrl, 'vieshow']);
+      for (let d = 0; d < 3; d++) {
+        const day = addDays(today, d);
+        urls.push([day, 'https://www.atmovies.com.tw/showtime/' + atmoviesFallback[cinema.id][0] + '/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
+      }
+    }
     else if (cinema.id.startsWith('ambassador-')) for (let d=0;d<3;d++) {
       const day = addDays(today,d);
       urls.push([day, cinema.showtimesUrl + '&DT=' + day.replaceAll('-', '%2F'), 'ambassador']);
@@ -131,10 +152,12 @@ async function run() {
       const day = addDays(today,d);
       urls.push([day, 'https://www.atmovies.com.tw/showtime/t02d03/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
     }
+    let officialSucceeded = false;
     for (const [day,url,kind] of urls) {
+      if (kind === 'atmovies' && officialSucceeded) continue;
       try {
         const markdown = await get(url);
-        if (kind === 'vieshow') parseVieshow(markdown, cinema);
+        if (kind === 'vieshow') { parseVieshow(markdown, cinema); officialSucceeded = true; }
         if (kind === 'ambassador') parseAmbassador(markdown, cinema, day, url);
         if (kind === 'atmovies') parseAtmovies(markdown, cinema, day, url);
       } catch (e) { error = (e instanceof Error ? e.message : String(e)).slice(0, 150); console.warn(cinema.id, day, error); }
@@ -142,11 +165,14 @@ async function run() {
     const rows = output.slice(before);
     dates = [...new Set(rows.map(r=>r.sourceBusinessDate))].sort();
     const success = rows.length > 0;
-    sources.push({ cinemaId: cinema.id, sourceUrl: cinema.showtimesUrl,
+    const usedFallback = success && cinema.id.startsWith('vieshow-') && !officialSucceeded;
+    sources.push({ cinemaId: cinema.id, sourceUrl: success ? rows[0].sourceUrl : cinema.showtimesUrl,
       state: success ? (error ? 'partial' : 'ok') : 'error',
       lastAttemptAt: checkedAt, lastSuccessAt: success ? checkedAt : null,
       coverage: dates,
-      message: success ? rows.length + ' 個可解析場次／' + dates.length + ' 個日期' + (error ? '；其他頁面讀取失敗' : '') :
+      message: success ? rows.length + ' 個可解析場次／' + dates.length + ' 個日期' +
+        (usedFallback ? '；威秀官方來源拒絕自動請求，改用開眼影城頁' : '') +
+        (error && !usedFallback ? '；其他頁面讀取失敗' : '') :
         '無法安全解析場次；請前往來源網頁確認' });
     console.log(cinema.id + ': ' + rows.length + ' screenings, days=' + dates.length);
   }
