@@ -144,7 +144,7 @@
       esc(sourceMode()?'已發布場次快照':personalImportActive?'個人匯入 · 未經核對':'虛構測試資料')+
       '</p><h3>'+esc(chosen.title)+'</h3><p>'+chosen.cinemaIds.size+' 間影城 · '+chosen.rows.length+
       ' 個未開演場次 · '+dates.length+' 個日期</p>'+
-      '<p>請先選上映日期，再比較影城與放映時間。「前往官方訂票」通常需在官方網站重新選擇相同場次。</p></div></div>'+
+      '<p>'+(sourceMode()?'請先選上映日期，再比較影城與放映時間。前往影城官方售票入口後，通常需再次選擇相同場次。':'目前為個人匯入或虛構測試資料，沒有經過官方場次核對，因此不提供訂票按鈕。')+'</p></div></div>'+
       buttons+'<div class="film-detail-filters"><span>'+shown.length+' 個顯示場次</span>'+options+'</div>'+
       (theatres||'<p class="film-empty">此篩選下暫無場次，請選擇其他日期或影城。</p>');
     detail.querySelectorAll('[data-film-date]').forEach(button=>button.addEventListener('click',()=>{
