@@ -212,6 +212,8 @@
     
 
   </style>
+<link rel="stylesheet" href="./movie-pages.css">
+<script defer src="./movie-pages.js"></script>
 <meta name="movie-checker-hosting" content="snapshot"></head>
 <body>
   <div class="shell">
@@ -222,7 +224,7 @@
       </a>
       <div class="top-links">
         <a href="#live-showtimes">真實場次入口</a>
-        <a href="#screening-view">電影場次</a>
+        <a href="#movie-explorer">電影總覽</a>
         <span class="demo-label">TEST PREVIEW · SYNTHETIC DATA</span>
       </div>
     </header>
@@ -233,7 +235,7 @@
           <p class="eyebrow">台北市・電影場次探索</p>
           <h1 id="main-title">挑一場，讓今天<br>更像電影。</h1>
         </div>
-        <p class="hero-note"><strong>個人非商業 POC · 台北及鄰近地區</strong><br>提供影城場次來源入口，並以虛構資料測試搜尋、篩選與地圖介面；本站不是官方售票服務。</p>
+        <p class="hero-note"><strong>個人非商業 POC · 台北及鄰近地區</strong><br>依電影瀏覽影城、日期、時刻及一般票價參考，並前往影城的官方線上售票平台；本站不代收款項。</p>
       </section>
 
       <aside class="demo-banner" aria-label="場次資料說明">
@@ -242,9 +244,27 @@
       </aside>
 
       
+<section id="movie-explorer" class="movie-explorer" aria-labelledby="film-explorer-title">
+  <div class="film-explorer-head">
+    <div><p class="eyebrow">MOVIE FIRST · 先選片，再挑場次</p>
+      <h2 id="film-explorer-title">上映電影與線上訂票</h2>
+      <p>選擇電影即可進入專屬頁面，比較不同影城的上映日期、時刻與票價參考，並開啟影城官方售票入口。</p>
+    </div>
+    <span class="film-explorer-kicker">台北／新北 · 12 間影城</span>
+  </div>
+  <div id="film-tools" class="film-tools">
+    <label class="film-search-label" for="film-search">搜尋電影<input id="film-search" type="search" placeholder="輸入電影名稱" autocomplete="off"></label>
+    <label class="film-sort-label" for="film-sort">電影排序<select id="film-sort"><option value="popular">最多場次</option><option value="next">最快開演</option><option value="title">電影名稱</option></select></label>
+    <span id="film-count" aria-live="polite"></span>
+  </div>
+  <div id="film-grid" class="film-grid" aria-live="polite"></div>
+  <div id="film-detail" class="film-detail hidden" aria-live="polite"></div>
+  <p class="film-note">票價顯示公開一般全票參考價（NT$），非單場即時最終報價。特殊影廳、優惠及網路服務費等請以官方結帳頁為準。官方訂票入口可能需要再選一次影城、電影、日期與時間。網站不處理付款。</p>
+</section>
+
 <section class="live-source-section" id="live-showtimes" aria-labelledby="live-showtimes-title">
  <div class="live-source-heading"><div><p class="eyebrow">SOURCE LINKS · 影城資訊</p><h2 id="live-showtimes-title">電影院官方網址</h2></div>
- <p>按下影城集團名稱即可展開各戲院場次網址。外部頁面提供最新公布資訊；本站目前仍顯示<strong>虛構測試場次，尚未完成真實場次同步</strong>。</p></div>
+ <p>按下影城集團名稱即可展開各戲院場次網址。外部頁面提供最新公布資訊；本站提供<strong>已發布的來源場次快照</strong>，部分影城以開眼電影網備援，實際購票資訊以影城公告為準。</p></div>
  <div class="cinema-source-accordion" aria-label="依影城集團展開網址"><details class="cinema-source-group">
  <summary><span class="cinema-source-summary-main"><span class="cinema-source-dot" aria-hidden="true"></span><span class="cinema-source-summary-text"><strong>威秀影城</strong><small>9 間影城 · 台北、新北</small></span></span><span class="cinema-source-action"><span class="cinema-source-action-label">顯示影城網址</span><span class="cinema-source-chevron" aria-hidden="true">⌄</span></span></summary>
  <div class="live-cinema-grid"><article class="live-cinema-card"><span class="live-cinema-meta">信義區</span><h4>台北信義威秀影城</h4><p>台北市信義區松壽路20號</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=1" target="_blank" rel="noopener noreferrer" aria-label="開啟台北信義威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
@@ -636,6 +656,7 @@
         $('#empty-state').classList.toggle('hidden', items.length > 0);
       }
       document.querySelectorAll('[data-view]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.view === selectedView)));
+      if (typeof window.renderMovieExplorer === 'function') window.renderMovieExplorer();
     }
     function movieChoices(filters) {
       const choices = new Map();
