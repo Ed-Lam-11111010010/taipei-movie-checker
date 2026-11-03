@@ -13,6 +13,30 @@ const maximumDate = addDays(today, 30);
 const validTime = /^([01]\d|2[0-3]):[0-5]\d$/;
 const seen = new Set();
 const output = [];
+// Keep all poster URLs matched to the same movie on a trusted source page.
+// Never infer a poster from title-only search results or accept arbitrary hosts.
+function trustedPoster(poster) {
+  if (!poster || !poster.url || !poster.source) return {};
+  try {
+    const image = new URL(poster.url);
+    const page = new URL(poster.source);
+    if (image.protocol !== 'https:' || page.protocol !== 'https:' ||
+        image.username || image.password || image.port ||
+        page.username || page.password || page.port) return {};
+    const photo = /^\/photo101\/([a-z0-9]+)\/pl_([a-z0-9]+)\.jpg$/i.exec(image.pathname);
+    const film = /^\/(?:movie|film)\/([a-z0-9]+)\/$/i.exec(page.pathname);
+    const atmovies = image.hostname === 'www.atmovies.com.tw' &&
+      page.hostname === 'www.atmovies.com.tw' && photo && film &&
+      photo[1].toLowerCase() === photo[2].toLowerCase() &&
+      photo[1].toLowerCase() === film[1].toLowerCase();
+    const ambassador = image.hostname === 'www.ambassador.com.tw' &&
+      page.hostname === 'www.ambassador.com.tw' &&
+      /^\/assets\/img\/movies\/[a-z0-9_.()-]+\.(?:jpg|jpeg|png|webp)$/i.test(image.pathname) &&
+      page.pathname === '/home/MovieContent' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(page.searchParams.get('MID') || '');
+    return atmovies || ambassador ? { posterUrl: image.href, posterSourceUrl: page.href } : {};
+  } catch { return {}; }
+}
 // Alternate publicly readable theater-specific schedule pages. Used only if the Vieshow site blocks GitHub Actions.
 const atmoviesFallback = {
   'vieshow-xinyi': ['t02a01', '台北信義威秀'],
@@ -27,7 +51,7 @@ const atmoviesFallback = {
   'showtime-xinxin': ['t02d03', '欣欣秀泰影城']
 };
 function textMd(html) { return converter.turndown(html).replace(/\r/g, ''); }
-function record(cinema, businessDate, title, format, time, sourceUrl) {
+function record(cinema, businessDate, title, format, time, sourceUrl, poster = null) {
   title = String(title || '').replace(/\s+/g, ' ').trim();
   format = String(format || '數位').replace(/\s+/g, ' ').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(businessDate) || businessDate < today ||
@@ -42,7 +66,7 @@ function record(cinema, businessDate, title, format, time, sourceUrl) {
   const id = 'source-' + crypto.createHash('sha256').update(key).digest('hex').slice(0, 20);
   output.push({ id, cinemaId: cinema.id, date, sourceBusinessDate: businessDate,
     title, time, startsAt: date + 'T' + time + ':00+08:00', format,
-    sourceUrl, isDemo: false, fetchedAt: checkedAt, posterVariant: 'teal' });
+    sourceUrl, isDemo: false, fetchedAt: checkedAt, posterVariant: 'teal', ...trustedPoster(poster) });
 }
 function vieshowDates(header) {
   const dates = [];
@@ -82,18 +106,25 @@ function parseVieshow(md, cinema) {
 function parseAmbassador(md, cinema, date, url) {
   if (!md.includes(date.replaceAll('-', '/')) || !md.includes(cinema.name)) throw new Error('Ambassador venue/date mismatch');
   const rows = md.split('\n');
-  let title = '', format = '', active = false, matched = 0;
+  let title = '', format = '', active = false, matched = 0, posterCandidate = null, filmPoster = null;
   for (const raw of rows) {
     const line = raw.trim();
     if (/^##\s+影城資訊/.test(line)) break;
-    if (/^###\s+/.test(line)) { title = ''; format = ''; active = true; }
+    const posterLink = /\[!\[\]\((https:\/\/www\.ambassador\.com\.tw\/assets\/img\/movies\/[^)\s]+)\)\]\((\/home\/MovieContent\?MID=[^)]+)\)/i.exec(line);
+    if (posterLink) posterCandidate = { url: posterLink[1], page: posterLink[2] };
+    if (/^###\s+/.test(line)) {
+      title = ''; format = ''; active = true;
+      const heading = /^###\s+\[[^\]]+\]\((\/home\/MovieContent\?MID=[^)]+)\)/i.exec(line);
+      filmPoster = heading && posterCandidate && heading[1] === posterCandidate.page ?
+        { url: posterCandidate.url, source: 'https://www.ambassador.com.tw' + heading[1] } : null;
+    }
     const variant = /^\(([^)]{2,50})\)\s*(.{2,120})$/.exec(line);
     if (active && variant && /數位|ATMOS|IMAX|D-BOX|膠卷|國語|英文|日文|中文版|特別/.test(variant[1])) {
       title = variant[2].trim(); format = variant[1].trim(); continue;
     }
     if (!active || !title || !format) continue;
     const clock = /^(?:[-*]\s+)?#{4,6}\s+([01]\d|2[0-3]):([0-5]\d)/.exec(line);
-    if (clock) { record(cinema, date, title, format, clock[1] + ':' + clock[2], url); matched++; }
+    if (clock) { record(cinema, date, title, format, clock[1] + ':' + clock[2], url, filmPoster); matched++; }
   }
   if (matched < 1) throw new Error('No Ambassador showtimes');
 }
@@ -104,17 +135,28 @@ function parseAtmovies(md, cinema, date, url) {
   const start = md.indexOf(marker);
   if (start < 0) throw new Error('No atmovies date heading');
   const section = md.slice(start).split(/更新時間:|## 台北戲院時間查詢/)[0];
-  let title = '', format = '數位', matched = 0;
+  let title = '', format = '數位', matched = 0, filmId = '', filmPoster = null;
   for (const raw of section.split('\n')) {
     const line = raw.trim();
     if (/^#{1,4}\s+/.test(line) && !line.includes(marker)) { title = ''; continue; }
     // Titles must be linked to an @movies film page to avoid treating navigation as a movie.
     const film = line.match(/\[([^\]]{2,80})\]\((?:https?:\/\/[^)]*|\/)?(?:movie|film)\/[^)]*\)/i);
-    if (film && !/片長|其他戲院|預告/.test(film[1])) { title = film[1].trim(); format = '數位'; continue; }
+    if (film && !/片長|其他戲院|預告/.test(film[1])) {
+      title = film[1].trim(); format = '數位';
+      filmId = /\/(?:movie|film)\/([a-z0-9]+)\//i.exec(line)?.[1] || '';
+      filmPoster = null;
+      continue;
+    }
+    const image = /!\[[^\]]*\]\((\/photo101\/([a-z0-9]+)\/pl_([a-z0-9]+)\.jpg)\)/i.exec(line);
+    if (title && filmId && image && image[2].toLowerCase() === filmId.toLowerCase() &&
+        image[3].toLowerCase() === filmId.toLowerCase()) {
+      filmPoster = { url: 'https://www.atmovies.com.tw' + image[1],
+        source: 'https://www.atmovies.com.tw/movie/' + filmId + '/' };
+    }
     if (title && /^\s*[*+-]\s+/.test(line)) {
       if (/SCREENX|IMAX|4DX|ATMOS/.test(line)) { format = line.replace(/^[*+-]\s*/, '').trim(); continue; }
       const t = line.match(/(?:^|[^\d])([01]\d|2[0-3])[：:]([0-5]\d)(?!\d)/);
-      if (t) { record(cinema, date, title, format, t[1] + ':' + t[2], url); matched++; }
+      if (t) { record(cinema, date, title, format, t[1] + ':' + t[2], url, filmPoster); matched++; }
     }
   }
   if (matched < 1) throw new Error('No trustworthy atmovies rows');
@@ -181,43 +223,39 @@ async function run() {
   output.sort((a,b) => a.startsAt.localeCompare(b.startsAt) || a.title.localeCompare(b.title));
   const catalog = { schemaVersion: 1, mode: 'source-snapshot', checkedAt,
     refreshIntervalMinutes: 360, cinemas: previous.cinemas, screenings: output,
-    sources, adapterVersion: 'github-actions-source-parser-v1' };
+    sources, adapterVersion: 'github-actions-source-parser-v2-posters' };
   fs.writeFileSync('catalog.json', JSON.stringify(catalog) + '\n');
   console.log('Published snapshot: ' + output.length + ' entries, ' + sources.filter(s => s.lastSuccessAt).length + '/12 venues, ' + checkedAt);
 }
 function selftest() {
-  const fake = { id:'vieshow-xinyi',name:'台北信義威秀影城',officialUrl:'https://www.vscinemas.com.tw/theater/detail.aspx?id=1'};
-  const head = '<h2>場次查詢全台威秀影城隔週電影新場次</h2><p>11/03 (二)</p><p>*所有售票通路同步開放購票</p>';
+  const fake = { id:'vieshow-xinyi',name:'台北信義威秀影城',officialUrl:'https://www.vscinemas.com.tw/theater/detail.aspx?id=1' };
+  const weekday = '日一二三四五六'[new Date(today + 'T00:00:00Z').getUTCDay()];
+  const head = '<h2>場次查詢全台威秀影城隔週電影新場次</h2><p>' + today.slice(5,7) + '/' + today.slice(8) + ' (' + weekday + ')</p><p>*所有售票通路同步開放購票</p>';
   const films = ['泥面人','快打旋風'].map(title => '<h1>' + title + '</h1><h2>ENGLISH</h2><h4>數位(英)</h4><ul><li><a>13:20</a></li><li><a>16:30</a></li><li><a>19:00</a></li></ul>').join('');
   parseVieshow(textMd(head+films),fake);
   if (output.length !== 6) throw new Error('Vieshow parser selftest: ' + output.length);
-  console.log('Parser selftest passed');
+
+  const filmId = 'fcen34890576', formatDate = today.replaceAll('-', '/');
+  const atmoviesFixture = ['台北信義威秀', '### ' + formatDate + ' (二)',
+    '* [泥面人](/movie/' + filmId + '/)',
+    '* * [![](/photo101/' + filmId + '/pl_' + filmId + '.jpg)](http://app2.atmovies.com.tw/poster/' + filmId + '/)',
+    '* 19：30'].join('\n');
+  parseAtmovies(atmoviesFixture, fake, today, 'https://www.atmovies.com.tw/showtime/t02a01/a02/' + today.replaceAll('-', '') + '/');
+  const atm = output.find(row => row.cinemaId === fake.id && row.format === '數位' && row.title === '泥面人');
+  if (!atm || atm.posterUrl !== 'https://www.atmovies.com.tw/photo101/' + filmId + '/pl_' + filmId + '.jpg' ||
+      atm.posterSourceUrl !== 'https://www.atmovies.com.tw/movie/' + filmId + '/') throw new Error('Atmovies poster selftest failed');
+
+  const venue = { id:'ambassador-main',name:'國賓大戲院' }, mid='74a37a70-92f7-42c8-8809-b69f94ee3453';
+  const page = '/home/MovieContent?MID=' + mid + '&DT=' + formatDate;
+  const jpg = 'https://www.ambassador.com.tw/assets/img/movies/Clayface_180x270_Poster.jpg';
+  const ambassadorFixture = [venue.name, formatDate, '[![](' + jpg + ')](' + page + ')',
+    '### [泥面人Clayface](' + page + ')', '(數位‧英文版)泥面人', '* ###### 18:50'].join('\n');
+  parseAmbassador(ambassadorFixture, venue, today, 'https://www.ambassador.com.tw/home/Showtime?ID=84b87b82-b936-4a39-b91f-e88328d33b4e');
+  const amb = output.find(row => row.cinemaId === venue.id && row.title === '泥面人');
+  if (!amb || amb.posterUrl !== jpg || !amb.posterSourceUrl.includes(mid)) throw new Error('Ambassador poster selftest failed');
+  if (Object.keys(trustedPoster({url:'https://www.atmovies.com.tw/photo101/a/pl_b.jpg',source:'https://www.atmovies.com.tw/movie/a/'})).length) throw new Error('Poster mismatch must be rejected');
+  console.log('Parser and source-matched poster selftests passed');
 }
 
-async function inspectPosterSources() {
-  const urls = [
-    'https://www.atmovies.com.tw/movie/now/',
-    'https://www.atmovies.com.tw/movie/fcen34890576/',
-    'https://www.atmovies.com.tw/showtime/t02a01/a02/20261104/',
-    'https://www.ambassador.com.tw/home/Showtime?ID=453b2966-f7c2-44a9-b2eb-687493855d0e&DT=2026%2F11%2F04'
-  ];
-  for (const url of urls) {
-    try {
-      const response = await fetch(url,{headers:{'User-Agent':'Mozilla/5.0','Accept-Language':'zh-TW,zh;q=0.9'}});
-      const html = await response.text();
-      const md = textMd(html);
-      console.log('INSPECT URL',url,'status',response.status,'chars',html.length);
-      const needles=['泥面人','fcen34890576','og:image','poster','img src','data-src','海報'];
-      for(const needle of needles) {
-        const spot=html.indexOf(needle);
-        if(spot>=0) console.log('HTML',needle,JSON.stringify(html.slice(Math.max(0,spot-280),spot+450)));
-        const mdSpot=md.indexOf(needle);
-        if(mdSpot>=0) console.log('MARKDOWN',needle,JSON.stringify(md.slice(Math.max(0,mdSpot-280),mdSpot+450)));
-      }
-      console.log('IMG SAMPLES', [...html.matchAll(/<img\b[^>]{0,600}>/gi)].slice(0,12).map(m=>m[0].slice(0,500)));
-    } catch(error) {console.log('INSPECT ERR',url,String(error));}
-  }
-}
-if (process.argv.includes('--inspect-posters')) inspectPosterSources().catch(e=> {console.error(e);process.exitCode=1});
-else if (process.argv.includes('--self-test')) selftest();
+if (process.argv.includes('--self-test')) selftest();
 else run().catch(e => { console.error(e.stack || e); process.exitCode = 1; });
