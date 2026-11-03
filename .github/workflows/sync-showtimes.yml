@@ -35,6 +35,8 @@ jobs:
         run: npm install --no-save --no-audit --no-fund --prefix /tmp/movie-checker-deps turndown@7.2.0
       - name: Validate source parser
         run: node scripts/sync-showtimes.cjs --self-test
+      - name: Inspect film poster metadata (temporary)
+        run: node scripts/sync-showtimes.cjs --inspect-posters
       - name: Read and validate cinema listings
         run: node scripts/sync-showtimes.cjs
       - name: Commit verified source snapshot
