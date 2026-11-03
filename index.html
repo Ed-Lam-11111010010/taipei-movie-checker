@@ -373,10 +373,10 @@
       let url;
       try {
         const candidate = new URL(item.posterUrl);
-        const paths = {'www.unicornpopcorn.com.tw':/^\/ForVsWeb\/upload\/film\//i,'www.vscinemas.com.tw':/^\/(?:vsweb\/)?upload\/film\//i,'www.ambassador.com.tw':/^\/assets\/img\/movies\//i};
+        const paths = {'www.unicornpopcorn.com.tw':/^\/ForVsWeb\/upload\/film\//i,'www.vscinemas.com.tw':/^\/(?:vsweb\/)?upload\/film\//i,'www.ambassador.com.tw':/^\/assets\/img\/movies\//i,'www.atmovies.com.tw':/^\/photo101\/[a-z0-9]+\/pl_[a-z0-9]+\.jpg$/i};
         if (candidate.protocol === 'https:' && !candidate.username && !candidate.password && !candidate.port && paths[candidate.hostname]?.test(candidate.pathname) && /\.(?:jpe?g|png|webp)$/i.test(candidate.pathname)) url = candidate.href;
       } catch {}
-      return url ? `<a class="poster poster-photo" href="${esc(item.posterSourceUrl || item.sourceUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(item.title)}：官方電影資料與海報">${fallback}<img src="${esc(url)}" alt="${esc(item.title)}電影海報" width="104" height="156" loading="lazy" decoding="async" referrerpolicy="no-referrer"></a>` : `<div class="poster" aria-hidden="true">${fallback}</div>`;
+      return url ? `<a class="poster poster-photo" href="${esc(item.posterSourceUrl || item.sourceUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(item.title)}：查看來源電影介紹與海報">${fallback}<img src="${esc(url)}" alt="${esc(item.title)}電影海報" width="104" height="156" loading="lazy" decoding="async" referrerpolicy="no-referrer"></a>` : `<div class="poster" aria-hidden="true">${fallback}</div>`;
     }
     function taipeiDateKey(now = new Date()) {
       const parts = new Intl.DateTimeFormat('en-US', {
