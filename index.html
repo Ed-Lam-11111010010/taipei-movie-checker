@@ -2,7 +2,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f4f1e9">
-  <title>Movie Checker｜真實場次入口與測試介面</title>
+  <title>Movie Checker｜個人非商業 POC · 官方場次入口與測試介面</title>
   <style>
     :root {
       color-scheme: light;
@@ -233,12 +233,12 @@
           <p class="eyebrow">台北市・電影場次探索</p>
           <h1 id="main-title">挑一場，讓今天<br>更像電影。</h1>
         </div>
-        <p class="hero-note"><strong>台北及鄰近地區 · 模擬電影場次</strong><br>從場次、地點到訂票入口，先把找電影的路徑整理清楚。</p>
+        <p class="hero-note"><strong>個人非商業 POC · 台北及鄰近地區</strong><br>提供影城場次來源入口，並以虛構資料測試搜尋、篩選與地圖介面；本站不是官方售票服務。</p>
       </section>
 
       <aside class="demo-banner" aria-label="場次資料說明">
         <span class="demo-icon" aria-hidden="true">!</span>
-        <div><b>測試版｜全部電影與場次皆為虛構</b>這是用於測試搜尋、篩選、排序、影城和地圖功能的模擬資料。並非官方電影放映時間，請勿依此訂票或安排行程。「更新場次」僅重新載入這份測試快照。</div>
+        <div><b>個人非商業 POC｜全部電影與場次皆為虛構</b>這是用於測試搜尋、篩選、排序、影城和地圖功能的模擬資料。並非官方電影放映時間，請勿依此訂票或安排行程。「更新場次」僅重新載入這份測試快照。</div>
       </aside>
 
       
@@ -298,7 +298,7 @@
             <div class="results-controls"><label class="sort-control" id="sort-control">排序<select id="sort-order" aria-describedby="sort-note"><option value="time">時間（最近開演）</option><option value="movie">電影（各版本分開）</option><option value="version">版本（各電影分開）</option></select></label><span id="result-count" class="result-count" aria-live="polite"></span></div>
           </div>
           <p class="sort-note" id="sort-note">同義版本合併選擇與計數，例如「數位(英)」與「數位‧英文版」統一為「數位（英語）」。不同語言、3D、特殊影廳及活動場保留區分；各場次仍顯示官方原始版本。</p>
-          <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="sync-time" role="status" aria-live="polite">讀取本機快照…</span><button type="button" class="refresh-button" id="refresh-catalog" aria-describedby="refresh-note">↻ 更新場次</button></div>
+          <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="sync-time" role="status" aria-live="polite">讀取本機快照…</span><button type="button" class="refresh-button" id="refresh-catalog" aria-describedby="refresh-note">↻ 重新載入測試場次</button></div>
           <div class="refresh-help hidden" id="refresh-help"><p>無法讀取線上快照。請確認網路後再試；現有場次會保留。</p></div>
           <p class="sr-only" id="refresh-note">重新載入已上線的場次快照，保留目前篩選；不會即時向戲院抓取資料。</p>
           <div id="source-health" class="filter-foot" style="white-space:pre-line;margin:0 0 16px"></div><label class="field" style="margin:0 0 16px"><span id="date-scope-note">其他日期（含預售場次）</span><input id="date-picker" type="date"></label><div id="screening-view" class="screening-list"></div>
@@ -313,7 +313,7 @@
     </main>
 
     <footer>
-      <p>Movie Checker · 台北電影場次與影城追蹤器 · 公開線上預覽</p>
+      <p>Movie Checker · 個人非商業 POC · 台北電影場次查詢介面</p>
       <p>本網站為功能測試版本；電影名稱及場次時間皆為虛構，不包含官方放映快照，也不提供實際訂票場次。</p>
     </footer>
   </div>
@@ -690,7 +690,7 @@
         document.getElementById('refresh-help').classList.remove('hidden');
       } finally {
         button.disabled = false;
-        button.textContent = '↻ 更新場次';
+        button.textContent = '↻ 重新載入測試場次';
         button.removeAttribute('aria-busy');
       }
     }
