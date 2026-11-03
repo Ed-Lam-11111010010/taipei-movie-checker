@@ -269,7 +269,10 @@
         const cinema = cinemas.find((item) => item.id === button.dataset.cinemaId);
         setMap(cinema);
       }));
-      if (items.length && !items.some((cinema) => cinema.id === selectedMapCinema)) setMap(items[0]);
+      if (items.length) {
+        const selectedCinema = items.find(cinema => cinema.id === selectedMapCinema) || items[0];
+        if ($('#theatre-map').dataset.cinemaId !== selectedCinema.id) setMap(selectedCinema);
+      }
       $('#map-layout').classList.toggle('hidden', selectedView !== 'map' || items.length === 0);
     }
     function render() {
