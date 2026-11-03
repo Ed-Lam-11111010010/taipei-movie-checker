@@ -584,8 +584,12 @@
       const counts = movieVersionCounts(items);
       list.innerHTML = items.map((item, index) => {
         const cinema = cinemas.find((candidate) => candidate.id === item.cinemaId);
-        const filmPage = officialFilmPage(item);
-        const bookingPage = officialBookingPage(item);
+        const ticket = typeof window.movieBookingFor === "function" ? window.movieBookingFor(item, cinema) : null;
+        const reference = typeof window.moviePriceFor === "function" ? window.moviePriceFor(item, cinema) : null;
+        const fromSource = typeof window.movieSourceLink === "function" ? window.movieSourceLink(item.sourceUrl) : null;
+        const priceMarkup = reference ? `<span class="screening-price" title="${esc(reference.note)}">${esc(reference.value)}</span>` : "";
+        const ticketAction = ticket ? `<a class="action-link" href="${esc(ticket.url)}" title="${esc(ticket.direct ? "原始場次訂票連結" : "請在影城平台重新選擇影城、電影、日期與場次")}" target="_blank" rel="noopener noreferrer">官方訂票 ↗</a>` : "";
+        const sourceAction = fromSource ? `<a class="map-quick-link" href="${esc(fromSource)}" target="_blank" rel="noopener noreferrer">核對場次 ↗</a>` : "";
         const variantKey = movieVersionKey(item);
         const startsGroup = sortSelect.value !== 'time' && (index === 0 || movieVersionKey(items[index - 1]) !== variantKey);
         const groupHeading = startsGroup ? `<div class="movie-group-heading"><h3>${esc(item.title)} <span class="tag">${esc(normalizeMovieFormat(item.format))}</span></h3><span>${counts.get(variantKey)} 個場次</span></div>` : '';
@@ -596,7 +600,7 @@
             <div class="cinema-row"><span class="pin" aria-hidden="true">⌖</span>${esc(cinema.name)}</div>
             <p class="address">${esc(cinema.address)}</p>
           </div>
-          <div class="screening-actions"><time class="screening-date" datetime="${esc(item.date)}">${esc(item.date)}（${dateLabel(item.date, {weekday: 'short'})}）</time><span class="time">${esc(item.time)}</span><a class="action-link" href="${esc(bookingPage || cinema.bookingUrl || item.sourceUrl || filmPage || cinema.schedules)}" title="${esc(bookingPage ? `訂購《${item.title}》${item.date} ${item.time} ${item.format}` : cinema.bookingUrl ? '前往官方訂票系統，請選擇影城與場次' : item.sourceUrl?.startsWith('https://www.atmovies.com.tw/') ? '在開眼電影網查看此影城當日場次' : '此場次未提供有效訂票連結，查看官方場次')}" target="_blank" rel="noopener noreferrer">查看場次</a><a class="map-quick-link" href="${mapsSearch(cinema)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a></div>
+           <div class="screening-actions"><time class="screening-date" datetime="${esc(item.date)}">${esc(item.date)}（${dateLabel(item.date, {weekday: 'short'})}）</time><span class="time">${esc(item.time)}</span>${priceMarkup}${ticketAction}${sourceAction}<a class="map-quick-link" href="${mapsSearch(cinema)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a></div>
         </article>`;
       }).join('');
       list.querySelectorAll('.poster img').forEach((img) => img.addEventListener('error', () => img.remove(), {once: true}));
