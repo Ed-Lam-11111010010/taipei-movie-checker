@@ -2,6 +2,21 @@
 
 Movie Checker 是個人非商業概念驗證網站，不是影城官方服務，也不處理售票交易。
 
+## 網站分頁與導覽
+
+Movie Checker 現在分成四個**真正獨立的網頁網址**，不再把每一種排序模式放在同一個畫面。頂端四項導覽可隨時切換，手機版也可以使用：
+
+| 分頁 | 路徑 | 主要任務 |
+| --- | --- | --- |
+| 電影 | `index.html`（首頁） | 依海報與電影片名找電影，進入可分享的 `#movie=<片名>` 詳情頁，查看各影城日期、票價參考及訂票入口 |
+| 時刻表 | `showtimes.html` | 依開演時間、日期、版本、電影與影城搜尋場次，保留原有詳盡的時刻表功能 |
+| 影城 | `cinemas.html` | 影城清單、地址、官方來源；「本站場次」連到已預選影城的時刻表 |
+| 地圖 | `map.html` | 地圖選擇影城、行政區篩選與直接查看該影城場次 |
+
+技術架構將原先單一大型 `index.html` 拆成共用 `app.css`、`app-core.js`、`movie-pages.js`、`movie-pages.css` 與 `demo-catalog.js`，四個 HTML 只共用介面結構，各自提供清楚的頁面定位；都讀取同一份定期發布的 `catalog.json`，不會出現各頁場次各自過期的問題。
+
+原本 672 筆虛構資料仍只能用於明確標示的介面測試，已移至獨立的 `demo-catalog.js`，不會被混入真實來源快照。CSV 個人匯入放到**時刻表 → 進階測試工具**，保持一般使用者畫面簡潔。
+
 ## 依電影瀏覽與官方訂票（Movie-first）
 
 網站首頁優先顯示「上映電影與線上訂票」：以海報為主的電影總覽，可以依 **最多場次／最快開演／電影名稱** 排序及搜尋片名。點進電影後，可按上映日期、影城篩選，查看未開演的日期、時間、版本、一般全票參考價，以及對應的影城官方購票入口。每部電影有可分享的網址 `#movie=<URL 編碼電影名稱>`。原本的場次、影城與地圖清單仍在頁面下方。
@@ -58,6 +73,6 @@ GitHub Pages 會在進入網站時讀取同目錄的 `catalog.json`，**預設�
 
 ## 公開檔案與來源
 
-GitHub Pages 網頁資產為 `index.html`、`catalog.json`、`movie-pages.js`、`movie-pages.css`、`README.md` 和 `.nojekyll`。自動更新使用 `.github/workflows/sync-showtimes.yml` 與 `scripts/sync-showtimes.cjs`，不包含 API 密鑰或私人同步設定。
+GitHub Pages 網頁資產包含四個主頁 `index.html`、`showtimes.html`、`cinemas.html`、`map.html`，共用資產 `app.css`、`app-core.js`、`demo-catalog.js`、`movie-pages.js`、`movie-pages.css`，以及 `catalog.json`、`README.md` 和 `.nojekyll`。自動更新使用 `.github/workflows/sync-showtimes.yml` 與 `scripts/sync-showtimes.cjs`，不包含 API 密鑰或私人同步設定。
 
 來源網站內容可能受到各網站的使用條款與更新政策規範。這個小型個人 POC 只顯示必要的事實性場次欄位及來源連結，不代理售票、不保證資料完整性或使用權；如來源條款不允許持續自動存取，應停用相關解析來源。
