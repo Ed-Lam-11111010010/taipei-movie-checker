@@ -154,11 +154,15 @@
     detail.querySelectorAll('.poster img').forEach(img=>img.addEventListener('error',()=>img.remove(),{once:true}));
   }
   window.renderMovieExplorer=renderMoviePage;
+  window.movieBookingFor=ticketFor;
+  window.moviePriceFor=priceFor;
+  window.movieSourceLink=sourceLink;
   $page('film-search').addEventListener('input',renderMoviePage);
   $page('film-sort').addEventListener('change',renderMoviePage);
   window.addEventListener('hashchange',()=>{
     chosenDate='auto';chosenCinema='';renderMoviePage();
     if(location.hash.startsWith('#movie=')) $page('movie-explorer').scrollIntoView({block:'start'});
   });
-  renderMoviePage();
+  // Also refresh the original time-based list, so its actions use the same portals.
+  render();
 })();
