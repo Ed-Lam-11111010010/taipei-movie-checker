@@ -193,5 +193,31 @@ function selftest() {
   if (output.length !== 6) throw new Error('Vieshow parser selftest: ' + output.length);
   console.log('Parser selftest passed');
 }
-if (process.argv.includes('--self-test')) selftest();
+
+async function inspectPosterSources() {
+  const urls = [
+    'https://www.atmovies.com.tw/movie/now/',
+    'https://www.atmovies.com.tw/movie/fcen34890576/',
+    'https://www.atmovies.com.tw/showtime/t02a01/a02/20261104/',
+    'https://www.ambassador.com.tw/home/Showtime?ID=453b2966-f7c2-44a9-b2eb-687493855d0e&DT=2026%2F11%2F04'
+  ];
+  for (const url of urls) {
+    try {
+      const response = await fetch(url,{headers:{'User-Agent':'Mozilla/5.0','Accept-Language':'zh-TW,zh;q=0.9'}});
+      const html = await response.text();
+      const md = textMd(html);
+      console.log('INSPECT URL',url,'status',response.status,'chars',html.length);
+      const needles=['泥面人','fcen34890576','og:image','poster','img src','data-src','海報'];
+      for(const needle of needles) {
+        const spot=html.indexOf(needle);
+        if(spot>=0) console.log('HTML',needle,JSON.stringify(html.slice(Math.max(0,spot-280),spot+450)));
+        const mdSpot=md.indexOf(needle);
+        if(mdSpot>=0) console.log('MARKDOWN',needle,JSON.stringify(md.slice(Math.max(0,mdSpot-280),mdSpot+450)));
+      }
+      console.log('IMG SAMPLES', [...html.matchAll(/<img\b[^>]{0,600}>/gi)].slice(0,12).map(m=>m[0].slice(0,500)));
+    } catch(error) {console.log('INSPECT ERR',url,String(error));}
+  }
+}
+if (process.argv.includes('--inspect-posters')) inspectPosterSources().catch(e=> {console.error(e);process.exitCode=1});
+else if (process.argv.includes('--self-test')) selftest();
 else run().catch(e => { console.error(e.stack || e); process.exitCode = 1; });
