@@ -586,7 +586,7 @@
         const cinema = cinemas.find((candidate) => candidate.id === item.cinemaId);
         const ticket = typeof window.movieBookingFor === "function" ? window.movieBookingFor(item, cinema) : null;
         const reference = typeof window.moviePriceFor === "function" ? window.moviePriceFor(item, cinema) : null;
-        const fromSource = typeof window.movieSourceLink === "function" ? window.movieSourceLink(item.sourceUrl) : null;
+        const fromSource = sourceMode() && !item.isDemo && typeof window.movieSourceLink === "function" ? window.movieSourceLink(item.sourceUrl) : null;
         const priceMarkup = reference ? `<span class="screening-price" title="${esc(reference.note)}">${esc(reference.value)}</span>` : "";
         const ticketAction = ticket ? `<a class="action-link" href="${esc(ticket.url)}" title="${esc(ticket.direct ? "原始場次訂票連結" : "請在影城平台重新選擇影城、電影、日期與場次")}" target="_blank" rel="noopener noreferrer">官方訂票 ↗</a>` : "";
         const sourceAction = fromSource ? `<a class="map-quick-link" href="${esc(fromSource)}" target="_blank" rel="noopener noreferrer">核對場次 ↗</a>` : "";
