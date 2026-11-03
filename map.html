@@ -1,0 +1,171 @@
+<!DOCTYPE html><html lang="zh-Hant"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f1e9">
+  <title>影城地圖｜Movie Checker 台北電影場次</title>
+  
+<link rel="stylesheet" href="./app.css">
+<link rel="stylesheet" href="./movie-pages.css">
+<script defer src="./demo-catalog.js"></script>
+<script defer src="./app-core.js"></script>
+<script defer src="./movie-pages.js"></script>
+<meta name="movie-checker-hosting" content="snapshot"></head>
+<body class="page-map" data-page="map">
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="./index.html" aria-label="Movie Checker 電影首頁">
+        <span class="brand-mark" aria-hidden="true">▶</span>
+        <span>MOVIE CHECKER<small>TAIPEI SCREENINGS</small></span>
+      </a>
+      <div class="top-links">
+        <nav class="site-nav" aria-label="網站主選單">
+          <a href="./index.html" data-nav="movies">電影</a>
+          <a href="./showtimes.html" data-nav="showtimes">時刻表</a>
+          <a href="./cinemas.html" data-nav="cinemas">影城</a>
+          <a href="./map.html" data-nav="map" aria-current="page">地圖</a>
+        </nav>
+        <span class="demo-label">SOURCE SNAPSHOT · CHECKING</span>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="main-title">
+        <div>
+          <p class="eyebrow">台北市・電影場次探索</p>
+          <h1 id="main-title">在城市地圖上，<br>找一場電影。</h1>
+        </div>
+        <p class="hero-note"><strong>個人非商業 POC · 台北及鄰近地區</strong><br>依行政區和影城快速找到地點，查看 Google Maps 與對應的本站場次。 本站不代收款項。</p>
+      </section>
+
+      <aside class="demo-banner" aria-label="場次資料說明">
+        <span class="demo-icon" aria-hidden="true">!</span>
+        <div><b>個人非商業 POC｜全部電影與場次皆為虛構</b>這是用於測試搜尋、篩選、排序、影城和地圖功能的模擬資料。並非官方電影放映時間，請勿依此訂票或安排行程。「更新場次」僅重新載入這份測試快照。</div>
+      </aside>
+
+      
+<div class="page-data-summary-wrap" role="group" aria-label="資料更新狀態"><span id="page-data-summary" role="status" aria-live="polite">載入最新發布場次中…</span><a href="./cinemas.html">查看影城及來源 →</a></div>
+
+<section id="movie-explorer" class="movie-explorer" aria-labelledby="film-explorer-title">
+  <div class="film-explorer-head">
+    <div><p class="eyebrow">MOVIE FIRST · 先選片，再挑場次</p>
+      <h2 id="film-explorer-title">上映電影與線上訂票</h2>
+      <p>選擇電影即可進入專屬頁面，比較不同影城的上映日期、時刻與票價參考，並開啟影城官方售票入口。</p>
+    </div>
+    <span class="film-explorer-kicker">台北／新北 · 12 間影城</span>
+  </div>
+  <div id="film-tools" class="film-tools">
+    <label class="film-search-label" for="film-search">搜尋電影<input id="film-search" type="search" placeholder="輸入電影名稱" autocomplete="off"></label>
+    <label class="film-sort-label" for="film-sort">電影排序<select id="film-sort"><option value="popular">最多場次</option><option value="next">最快開演</option><option value="title">電影名稱</option></select></label>
+    <span id="film-count" aria-live="polite"></span>
+  </div>
+  <div id="film-grid" class="film-grid" aria-live="polite"></div>
+  <div id="film-detail" class="film-detail hidden" aria-live="polite"></div>
+  <p class="film-note">票價顯示公開一般全票參考價（NT$），非單場即時最終報價。特殊影廳、優惠及網路服務費等請以官方結帳頁為準。官方訂票入口可能需要再選一次影城、電影、日期與時間。網站不處理付款。</p>
+</section>
+<div class="page-jump-grid" aria-label="其他瀏覽方式">
+  <a href="./showtimes.html"><strong>依時間找場次 →</strong><span>按日期、時間、版本比較所有影城的未開演場次。</span></a>
+  <a href="./cinemas.html"><strong>依影城查看 →</strong><span>瀏覽 12 間影城、各自的官方來源與場次。</span></a>
+  <a href="./map.html"><strong>地圖找影城 →</strong><span>依區域找到附近的影城，查看地點與進一步的場次。</span></a>
+</div>
+
+
+
+ 
+<div class="demo-section-title"><h2>電影場次查詢</h2><p>先讀取已發布的來源快照；顯示時會標示資料來源、查核狀態及台北時間。場次可能變更，訂票前請前往原站核對。</p></div>
+
+      <section class="toolbar" aria-label="日期與檢視方式">
+        <div id="date-strip" class="date-strip" role="group" aria-label="選擇觀影日期"></div>
+        <div class="view-switch" role="group" aria-label="選擇檢視方式">
+          <button type="button" data-view="screenings" aria-pressed="true">場次</button>
+          <button type="button" data-view="cinemas" aria-pressed="false">影城</button>
+          <button type="button" data-view="map" aria-pressed="false">地圖</button>
+        </div>
+      </section>
+
+      <div class="layout">
+        <aside class="filters" aria-labelledby="filter-title">
+          <h2 id="filter-title">縮小選擇</h2>
+          <div class="filter-controls">
+            <details class="movie-picker" id="movie-picker"><summary>選擇電影（可多選）<span id="movie-selection-status">全部電影／版本</span></summary><div class="movie-picker-body"><button class="movie-clear" id="movie-clear" type="button">取消電影勾選</button><p class="movie-picker-note">列出已取得資料中所有日期、影城與版本的電影。勾選後跨日期顯示該電影的未開演場次；取消勾選後恢復按日期查看。下列數量為符合其他篩選的跨日期場次數。</p><div class="movie-options" id="movie-options" role="group" aria-label="選擇電影與版本"></div></div></details>
+            <label class="field query-field"><span>關鍵字搜尋（選填）</span><input id="query" type="search" placeholder="片名可直接勾選；也可搜尋影城或地址" autocomplete="off"></label>
+            <label class="field"><span>行政區</span><select id="district"><option value="">全部行政區</option></select></label>
+            <label class="field"><span>影城</span><select id="cinema"><option value="">全部追蹤影城</option></select></label>
+            <label class="field"><span>放映版本</span><select id="format"><option value="">全部版本</option></select></label>
+          </div>
+          <button id="clear" class="clear-button" type="button">清除篩選</button>
+          <p class="filter-foot">影城清單未涵蓋台北市全部戲院。海報取自官方電影頁，點圖可查看電影資料；未配對或載入失敗時顯示暫無海報。</p>
+        </aside>
+
+        <section class="results" aria-labelledby="results-title">
+          <div class="results-head">
+            <div><h2 id="results-title">今日場次</h2><p id="selected-date"></p></div>
+            <div class="results-controls"><label class="sort-control" id="sort-control">排序<select id="sort-order" aria-describedby="sort-note"><option value="time">時間（最近開演）</option><option value="movie">電影（各版本分開）</option><option value="version">版本（各電影分開）</option></select></label><span id="result-count" class="result-count" aria-live="polite"></span></div>
+          </div>
+          <p class="sort-note" id="sort-note">同義版本合併選擇與計數，例如「數位(英)」與「數位‧英文版」統一為「數位（英語）」。不同語言、3D、特殊影廳及活動場保留區分；各場次仍顯示官方原始版本。</p>
+          <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="sync-time" role="status" aria-live="polite">讀取已發布的來源快照…</span><button type="button" class="refresh-button" id="refresh-catalog" aria-describedby="refresh-note">↻ 重新載入已發布場次</button><button type="button" class="refresh-button" id="toggle-demo-preview" aria-pressed="false">查看虛構測試資料</button></div>
+          <div class="refresh-help hidden" id="refresh-help"><p>無法讀取已發布的場次快照。請確認網路後再試；目前顯示的資料會保留。</p></div>
+          <p class="sr-only" id="refresh-note">重新載入 GitHub Pages 已發布的來源快照，保留目前篩選；資料由站點排程更新，不會從瀏覽器直接抓取影城。</p>
+          <div id="source-health" class="filter-foot" style="white-space:pre-line;margin:0 0 16px"></div><label class="field" id="extra-date-field" style="margin:0 0 16px"><span id="date-scope-note">其他日期（含預售場次）</span><input id="date-picker" type="date"></label><div id="screening-view" class="screening-list"></div>
+          <div id="cinema-view" class="venue-list hidden"></div>
+          <div id="map-layout" class="map-layout hidden">
+            <div class="map-destination"><span class="venue-kicker">GOOGLE MAPS · 地點導覽</span><h3 id="map-selected-name"></h3><p id="map-selected-address"></p><iframe id="theatre-map" class="theatre-map" title="Google Maps 影城位置" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe><span class="map-hint">可直接在此拖曳、縮放與查看位置；選擇其他影城會切換地圖。地圖由 Google 提供。</span><a id="map-launch" class="map-open" target="_blank" rel="noopener noreferrer">地圖無法載入？在 Google Maps 查看 ↗</a><a id="map-showtimes" class="map-route-link" href="./showtimes.html">查看這間影城場次 →</a></div>
+            <div class="map-venues"><h3>選擇影城</h3><div id="map-place-list"></div></div>
+          </div>
+          <p id="empty-state" class="empty hidden">目前沒有符合條件的未開演場次。請調整日期或篩選，並查看來源狀態；未取得資料不代表沒有放映。</p>
+        </section>
+      </div>
+      <details class="advanced-import"><summary>進階測試工具：個人場次 CSV 匯入</summary><section id="personal-import" aria-labelledby="personal-import-title" style="border:1px solid var(--line);background:var(--card);border-radius:16px;padding:18px 22px;margin:22px 0;">
+  <h2 id="personal-import-title" style="margin:0 0 8px;font-size:20px;">個人場次 CSV 匯入（僅限此瀏覽器）</h2>
+  <p style="margin:0 0 12px;">可匯入自己有權使用的場次做介面測試。檔案<strong>不會上傳到 GitHub 或本站伺服器</strong>，也不會自動向影城查詢。請以官方影城資訊核對；重新整理頁面會恢復原本的虛構測試資料。</p>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <input id="personal-showtimes-file" type="file" accept=".csv,text/csv" aria-describedby="personal-import-help" style="max-width:100%;font:inherit;">
+    <button id="personal-import-template" type="button" class="refresh-button">下載 CSV 範本</button>
+    <button id="personal-import-reset" type="button" class="refresh-button" disabled>恢復已發布場次</button>
+  </div>
+  <details style="margin-top:12px;">
+    <summary style="cursor:pointer;font-weight:700;">直接貼上 CSV 文字（不需選擇檔案）</summary>
+    <label for="personal-showtimes-paste" style="display:block;margin:10px 0 6px;">貼上已確認有權使用的電影場次資料：</label>
+    <textarea id="personal-showtimes-paste" rows="5" aria-describedby="personal-import-help" placeholder="cinemaId,title,date,time,format" style="width:100%;max-width:100%;padding:10px;border:1px solid var(--line);border-radius:7px;font:inherit;font-size:13px;"></textarea>
+    <button id="personal-import-paste-button" type="button" class="refresh-button" style="margin:8px 0 0;">預覽貼上的場次</button>
+  </details>
+  <p id="personal-import-help" style="margin:10px 0 0;font-size:13px;">CSV 欄位：cinemaId,title,date,time,format（台北時間）。支援本站追蹤的 12 間影城、最多 2,000 筆，來源連結使用網站現有的官方場次入口。</p>
+  <p id="personal-import-status" role="status" aria-live="polite" style="margin:8px 0 0;font-weight:600;"></p>
+</section></details>
+      <section class="live-source-section" id="live-showtimes" aria-labelledby="live-showtimes-title">
+ <div class="live-source-heading"><div><p class="eyebrow">SOURCE LINKS · 影城資訊</p><h2 id="live-showtimes-title">電影院官方網址</h2></div>
+ <p>按下影城集團名稱即可展開各戲院場次網址。外部頁面提供最新公布資訊；本站提供<strong>已發布的來源場次快照</strong>，部分影城以開眼電影網備援，實際購票資訊以影城公告為準。</p></div>
+ <div class="cinema-source-accordion" aria-label="依影城集團展開網址"><details class="cinema-source-group">
+ <summary><span class="cinema-source-summary-main"><span class="cinema-source-dot" aria-hidden="true"></span><span class="cinema-source-summary-text"><strong>威秀影城</strong><small>9 間影城 · 台北、新北</small></span></span><span class="cinema-source-action"><span class="cinema-source-action-label">顯示影城網址</span><span class="cinema-source-chevron" aria-hidden="true">⌄</span></span></summary>
+ <div class="live-cinema-grid"><article class="live-cinema-card"><span class="live-cinema-meta">信義區</span><h4>台北信義威秀影城</h4><p>台北市信義區松壽路20號</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=1" target="_blank" rel="noopener noreferrer" aria-label="開啟台北信義威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">大同區</span><h4>台北京站威秀影城</h4><p>台北市大同區市民大道一段209號5樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=2" target="_blank" rel="noopener noreferrer" aria-label="開啟台北京站威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">信義區</span><h4>MUVIE CINEMAS 台北松仁</h4><p>台北市信義區松仁路58號10樓（遠百信義A13）</p><a href="https://www.vscinemas.com.tw/theater/detail2.aspx?id=23" target="_blank" rel="noopener noreferrer" aria-label="開啟MUVIE CINEMAS 台北松仁的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">南港區</span><h4>台北南港LaLaport威秀影城</h4><p>台北市南港區經貿二路131號5樓（南港LaLaport購物中心）</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=34" target="_blank" rel="noopener noreferrer" aria-label="開啟台北南港LaLaport威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">萬華區</span><h4>台北西門威秀影城</h4><p>台北市萬華區漢中街52號8-11樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=31" target="_blank" rel="noopener noreferrer" aria-label="開啟台北西門威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">新北市板橋區</span><h4>板橋大遠百威秀影城</h4><p>新北市板橋區新站路28號10樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=4" target="_blank" rel="noopener noreferrer" aria-label="開啟板橋大遠百威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">新北市新店區</span><h4>新店裕隆城威秀影城</h4><p>新北市新店區中興路三段70號7樓（新店裕隆城）</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=28" target="_blank" rel="noopener noreferrer" aria-label="開啟新店裕隆城威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">新北市中和區</span><h4>中和環球威秀影城</h4><p>新北市中和區中山路三段122號4樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=25" target="_blank" rel="noopener noreferrer" aria-label="開啟中和環球威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">新北市林口區</span><h4>林口MITSUI OUTLET PARK威秀影城</h4><p>新北市林口區文化三路一段356號3樓</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=5" target="_blank" rel="noopener noreferrer" aria-label="開啟林口MITSUI OUTLET PARK威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article></div>
+ </details>
+<details class="cinema-source-group">
+ <summary><span class="cinema-source-summary-main"><span class="cinema-source-dot" aria-hidden="true"></span><span class="cinema-source-summary-text"><strong>國賓影城</strong><small>2 間影城 · 台北</small></span></span><span class="cinema-source-action"><span class="cinema-source-action-label">顯示影城網址</span><span class="cinema-source-chevron" aria-hidden="true">⌄</span></span></summary>
+ <div class="live-cinema-grid"><article class="live-cinema-card"><span class="live-cinema-meta">中山區</span><h4>台北長春國賓影城</h4><p>台北市中山區長春路176號</p><a href="https://www.ambassador.com.tw/home/Showtime?ID=453b2966-f7c2-44a9-b2eb-687493855d0e" target="_blank" rel="noopener noreferrer" aria-label="開啟台北長春國賓影城的國賓官方場次頁">國賓官方場次頁 ↗</a></article>
+<article class="live-cinema-card"><span class="live-cinema-meta">萬華區</span><h4>國賓大戲院</h4><p>台北市萬華區成都路88號</p><a href="https://www.ambassador.com.tw/home/Showtime?ID=84b87b82-b936-4a39-b91f-e88328d33b4e" target="_blank" rel="noopener noreferrer" aria-label="開啟國賓大戲院的國賓官方場次頁">國賓官方場次頁 ↗</a></article></div>
+ </details>
+<details class="cinema-source-group">
+ <summary><span class="cinema-source-summary-main"><span class="cinema-source-dot" aria-hidden="true"></span><span class="cinema-source-summary-text"><strong>秀泰影城</strong><small>1 間影城 · 欣欣秀泰</small></span></span><span class="cinema-source-action"><span class="cinema-source-action-label">顯示影城網址</span><span class="cinema-source-chevron" aria-hidden="true">⌄</span></span></summary>
+ <div class="live-cinema-grid"><article class="live-cinema-card"><span class="live-cinema-meta">中山區</span><h4>台北欣欣秀泰影城</h4><p>台北市中山區林森北路247號</p><a href="https://www.atmovies.com.tw/showtime/t02d03/a02/" target="_blank" rel="noopener noreferrer" aria-label="開啟台北欣欣秀泰影城的開眼電影網場次頁">開眼電影網場次頁 ↗</a></article></div>
+ </details></div>
+ </section>
+    </main>
+
+    <footer>
+      <p>Movie Checker · 個人非商業 POC · 台北電影場次查詢介面</p>
+      <p>本站為個人非商業 POC。已載入來源快照時，場次仍可能更新或取消；請至原始影城場次頁核對。虛構測試資料另行標示。</p>
+    </footer>
+  </div>
+
+  
+  
+
+
+</body></html>
