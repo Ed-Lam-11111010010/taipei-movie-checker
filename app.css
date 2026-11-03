@@ -224,6 +224,11 @@
 .page-movies .movie-explorer{margin-top:17px;}
 .page-movies .live-source-section,.page-movies #personal-import,.page-movies .demo-section-title,.page-movies .toolbar,.page-movies .layout{display:none;}
 .page-showtimes .movie-explorer,.page-showtimes .live-source-section{display:none;}
+.page-movies .advanced-import,.page-cinemas .advanced-import,.page-map .advanced-import{display:none;}
+.advanced-import{margin:24px 0;border:1px solid var(--line);border-radius:11px;background:var(--card);}
+.advanced-import>summary{cursor:pointer;font-size:13px;font-weight:750;padding:16px 19px;color:var(--ink);}
+.advanced-import>summary:hover{color:var(--purple);}
+.advanced-import #personal-import{margin:0!important;border:none!important;border-top:1px solid var(--line)!important;}
 .page-cinemas .movie-explorer,.page-cinemas #personal-import,.page-cinemas .demo-section-title{display:none;}
 .page-map .movie-explorer,.page-map #personal-import,.page-map .demo-section-title,.page-map .live-source-section{display:none;}
 .page-cinemas .live-source-section{margin-top:28px;}
