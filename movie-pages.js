@@ -16,7 +16,7 @@
   // The only supported general ticket destinations (do not synthesize session IDs).
   const PORTALS = {
     vieshow: 'https://www.vscinemas.com.tw/vsTicketing/ticketing/ticket.aspx',
-    ambassador: 'https://booking.ambassador.com.tw/frontend/booking-selectscreening2.html',
+    ambassador: 'https://booking.ambassador.com.tw/',
     showtime: 'https://www.showtimes.com.tw/cinemas/2/'
   };
   function sourceLink(value) {
