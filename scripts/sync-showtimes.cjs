@@ -309,7 +309,7 @@ function parseFuzhong(html, cinema, url) {
     const timeMatch = /(?:^|[^\d])([01]\d|2[0-3]):([0-5]\d)(?!\d)/.exec(cells[1] || '');
     if (!dateMatch || !timeMatch || Number(dateMatch[1]) !== month) return;
     const date = year+'-'+pad(month)+'-'+pad(Number(dateMatch[2]));
-    const rawTitle = cells[2].replace(/\s+/g,' ').trim();
+    const rawTitle = cells[2].replace(/\[([^\]]{1,120})\]\([^)]+\)/g,'$1').replace(/\s+/g,' ').trim();
     const status = /(?:^|\s)([售報索])$/.exec(rawTitle)?.[1] || '';
     const title = rawTitle.replace(/\s+[售報索]$/, '').trim();
     if (!title || title==='片名' || title.length>120) return;
@@ -481,7 +481,7 @@ function selftest() {
   const fuzhongFixture='<h1>府中15</h1><h2>'+today.slice(0,4)+'年'+Number(today.slice(5,7))+
     '月放映場次表</h2><table><tr><th>日期</th><th>時間</th><th>片名</th></tr><tr>'+
     '<td>'+Number(today.slice(5,7))+'/'+Number(today.slice(8))+'(三)</td>'+
-    '<td>19:00</td><td>不丹是幸福 售</td></tr></table>';
+    '<td>19:00</td><td><a href="/fuzhong15_chi/xcmovie/cont?sid=123">不丹是幸福</a> 售</td></tr></table>';
   parseFuzhong(fuzhongFixture,{id:'fuzhong15'},'https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260');
   if(!output.some(row=>row.cinemaId==='fuzhong15' && row.title==='不丹是幸福'))
     throw Error('Official Fuzhong parser selftest failed');
