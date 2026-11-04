@@ -1,6 +1,7 @@
-/* Additional cinema directory entries; no automated showtime verification yet.
-   Checked against September 2026 Taipei guide and New Taipei City listings 2026-11-04.
-   Browser-only additions: never publish fabricated showtime records. */
+/* Movie Checker supplemental theater directory.
+   @movies URLs are theater-specific listings; automated showtimes require validated
+   matching cinema/date and at least one parsed screening in catalog.json.
+   Entries that have not passed source sync remain directory-only. */
 window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
   {
     "id": "showtime-dome",
@@ -9,24 +10,26 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "信義區",
     "address": "台北市信義區光復南路105號2樓",
     "officialUrl": "https://www.showtimes.com.tw/",
-    "showtimesUrl": "https://www.showtimes.com.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02a13/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02a13/a02/"
   },
   {
     "id": "eslite-cinema",
     "name": "誠品電影院",
     "chain": "藝術電影院",
     "district": "信義區",
-    "address": "台北市信義區菸廠路80號B2",
+    "address": "台北市信義區菸廠路88號B2",
     "officialUrl": "https://arthouse.eslite.com/",
-    "showtimesUrl": "https://arthouse.eslite.com/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02a08/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02a08/a02/"
   },
   {
     "id": "luxcinema-ximen",
@@ -35,11 +38,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "萬華區",
     "address": "台北市萬華區武昌街二段85號",
     "officialUrl": "https://www.luxcinema.com.tw/",
-    "showtimesUrl": "https://www.luxcinema.com.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02b03/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02b03/a02/"
   },
   {
     "id": "wonderful-cinema",
@@ -48,11 +52,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "萬華區",
     "address": "台北市萬華區漢中街116號7樓",
     "officialUrl": "https://wonderful.movie.com.tw/",
-    "showtimesUrl": "https://wonderful.movie.com.tw/time",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02b07/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02b07/a02/"
   },
   {
     "id": "centuryasia-ximen",
@@ -61,11 +66,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "萬華區",
     "address": "台北市萬華區峨嵋街52號",
     "officialUrl": "https://ximen.centuryasia.com.tw/",
-    "showtimesUrl": "https://ximen.centuryasia.com.tw/Movie_Info.aspx",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02b06/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02b06/a02/"
   },
   {
     "id": "skcinema-ximen",
@@ -74,11 +80,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "萬華區",
     "address": "台北市萬華區西寧南路36號4樓",
     "officialUrl": "https://www.skcinemas.com/",
-    "showtimesUrl": "https://www.skcinemas.com/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02b05/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02b05/a02/"
   },
   {
     "id": "miramar-dazhi",
@@ -87,11 +94,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "中山區",
     "address": "台北市中山區敬業三路22號6樓",
     "officialUrl": "https://www.miramarcinemas.tw/",
-    "showtimesUrl": "https://www.miramarcinemas.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02d05/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02d05/a02/"
   },
   {
     "id": "miranew-dazhi",
@@ -100,11 +108,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "中山區",
     "address": "台北市中山區北安路780號B2",
     "officialUrl": "https://www.miranewcinemas.com/",
-    "showtimesUrl": "https://www.miranewcinemas.com/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02d06/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02d06/a02/"
   },
   {
     "id": "spot-taipei",
@@ -113,11 +122,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "中山區",
     "address": "台北市中山區中山北路二段18號",
     "officialUrl": "https://www.spot.org.tw/",
-    "showtimesUrl": "https://www.spot.org.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02d20/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02d20/a02/"
   },
   {
     "id": "spot-huashan",
@@ -126,11 +136,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "中正區",
     "address": "台北市中正區八德路一段1號",
     "officialUrl": "https://www.spot-hs.org.tw/",
-    "showtimesUrl": "https://www.spot-hs.org.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02b16/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02b16/a02/"
   },
   {
     "id": "governor-taipei",
@@ -139,11 +150,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "松山區",
     "address": "台北市松山區長安東路二段219號5樓之1",
     "officialUrl": "https://www.governor.com.tw/",
-    "showtimesUrl": "https://www.governor.com.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02a05/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02a05/a02/"
   },
   {
     "id": "breeze-taipei",
@@ -152,11 +164,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "松山區",
     "address": "台北市松山區復興南路一段39號8樓",
     "officialUrl": "https://breezecinemas.tixi.com.tw/",
-    "showtimesUrl": "https://breezecinemas.tixi.com.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02a03/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02a03/a02/"
   },
   {
     "id": "centuryasia-nangang",
@@ -165,11 +178,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "南港區",
     "address": "台北市南港區忠孝東路七段299號11樓",
     "officialUrl": "https://www.centuryasia.com.tw/",
-    "showtimesUrl": "https://www.centuryasia.com.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02a09/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02a09/a02/"
   },
   {
     "id": "halar-neihu",
@@ -178,11 +192,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "內湖區",
     "address": "台北市內湖區康寧路三段72號",
     "officialUrl": "https://www.halarcity.com/",
-    "showtimesUrl": "https://www.halarcity.com/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02a06/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02a06/a02/"
   },
   {
     "id": "skcinema-tianmu",
@@ -191,24 +206,26 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "士林區",
     "address": "台北市士林區忠誠路二段202號",
     "officialUrl": "https://www.skcinemas.com/",
-    "showtimesUrl": "https://www.skcinemas.com/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02d04/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02d04/a02/"
   },
   {
     "id": "broadway-gongguan",
     "name": "百老匯影城公館店",
     "chain": "百老匯影城",
-    "district": "文山區",
-    "address": "台北市文山區羅斯福路四段200號",
+    "district": "中正區",
+    "address": "台北市中正區羅斯福路四段200號3~5樓",
     "officialUrl": "https://www.broadway-cineplex.com.tw/",
-    "showtimesUrl": "https://www.broadway-cineplex.com.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02c01/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02c01/a02/"
   },
   {
     "id": "jingmei-jiajia",
@@ -217,11 +234,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "文山區",
     "address": "台北市文山區羅斯福路六段403號4樓",
     "officialUrl": null,
-    "showtimesUrl": "https://movie-chill.tw/theater_i-26.html",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02f05/a02/",
     "referenceUrl": "https://unclewriterfilm.com/cinema/taipei-cinemas/",
     "region": "台北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02f05/a02/"
   },
   {
     "id": "tiantai-sanchong",
@@ -230,11 +248,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "新北市三重區",
     "address": "新北市三重區重新路二段78號4樓",
     "officialUrl": "https://t-movies.tixi.com.tw/",
-    "showtimesUrl": "https://t-movies.tixi.com.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02e04/a02/",
     "referenceUrl": "https://www.info.ntpc.gov.tw/%E6%96%B0%E5%8C%97%E5%BD%B1%E8%A6%96%E5%9C%88/%E7%9C%8B%E9%9B%BB%E5%BD%B1/",
     "region": "新北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02e04/a02/"
   },
   {
     "id": "centuryasia-yonghe",
@@ -243,11 +262,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "新北市永和區",
     "address": "新北市永和區中山路一段238號4樓",
     "officialUrl": "https://beyond.centuryasia.com.tw/",
-    "showtimesUrl": "https://beyond.centuryasia.com.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02e17/a02/",
     "referenceUrl": "https://www.info.ntpc.gov.tw/%E6%96%B0%E5%8C%97%E5%BD%B1%E8%A6%96%E5%9C%88/%E7%9C%8B%E9%9B%BB%E5%BD%B1/",
     "region": "新北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02e17/a02/"
   },
   {
     "id": "showtime-tucheng",
@@ -256,11 +276,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "新北市土城區",
     "address": "新北市土城區學府路二段210號",
     "officialUrl": "https://www.showtimes.com.tw/",
-    "showtimesUrl": "https://www.showtimes.com.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02e15/a02/",
     "referenceUrl": "https://www.info.ntpc.gov.tw/%E6%96%B0%E5%8C%97%E5%BD%B1%E8%A6%96%E5%9C%88/%E7%9C%8B%E9%9B%BB%E5%BD%B1/",
     "region": "新北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02e15/a02/"
   },
   {
     "id": "fuzhong15",
@@ -273,7 +294,8 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "referenceUrl": "https://www.moovietime.com/cinemas/independent-fuzhong15",
     "region": "新北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02e08/a02/"
   },
   {
     "id": "ambassador-xinzhuang",
@@ -282,11 +304,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "新北市新莊區",
     "address": "新北市新莊區五工路66號3樓",
     "officialUrl": "https://www.ambassador.com.tw/home/TheaterList",
-    "showtimesUrl": "https://www.ambassador.com.tw/home/TheaterList",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02e11/a02/",
     "referenceUrl": "https://www.info.ntpc.gov.tw/%E6%96%B0%E5%8C%97%E5%BD%B1%E8%A6%96%E5%9C%88/%E7%9C%8B%E9%9B%BB%E5%BD%B1/",
     "region": "新北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02e11/a02/"
   },
   {
     "id": "machi-xinzhuang",
@@ -295,11 +318,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "新北市新莊區",
     "address": "新北市新莊區民安路188巷5號4樓",
     "officialUrl": "https://machicinema.wordpress.com/",
-    "showtimesUrl": "https://machicinema.wordpress.com/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02e03/a02/",
     "referenceUrl": "https://www.info.ntpc.gov.tw/%E6%96%B0%E5%8C%97%E5%BD%B1%E8%A6%96%E5%9C%88/%E7%9C%8B%E9%9B%BB%E5%BD%B1/",
     "region": "新北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02e03/a02/"
   },
   {
     "id": "ambassador-linkou",
@@ -308,11 +332,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "新北市林口區",
     "address": "新北市林口區文化三路一段402巷2號4樓",
     "officialUrl": "https://www.ambassador.com.tw/home/theater_intro_a9",
-    "showtimesUrl": "https://www.ambassador.com.tw/home/TheaterList",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02e10/a02/",
     "referenceUrl": "https://www.info.ntpc.gov.tw/%E6%96%B0%E5%8C%97%E5%BD%B1%E8%A6%96%E5%9C%88/%E7%9C%8B%E9%9B%BB%E5%BD%B1/",
     "region": "新北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02e10/a02/"
   },
   {
     "id": "ambassador-tamsui",
@@ -321,11 +346,12 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "新北市淡水區",
     "address": "新北市淡水區中正路一段2號",
     "officialUrl": "https://www.ambassador.com.tw/home/theater_intro_a13",
-    "showtimesUrl": "https://www.ambassador.com.tw/home/TheaterList",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02e18/a02/",
     "referenceUrl": "https://www.info.ntpc.gov.tw/%E6%96%B0%E5%8C%97%E5%BD%B1%E8%A6%96%E5%9C%88/%E7%9C%8B%E9%9B%BB%E5%BD%B1/",
     "region": "新北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02e18/a02/"
   },
   {
     "id": "showtime-shulin",
@@ -334,10 +360,11 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "新北市樹林區",
     "address": "新北市樹林區樹新路40-6號8樓",
     "officialUrl": "https://www.showtimes.com.tw/",
-    "showtimesUrl": "https://www.showtimes.com.tw/",
+    "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02e13/a02/",
     "referenceUrl": "https://www.info.ntpc.gov.tw/%E6%96%B0%E5%8C%97%E5%BD%B1%E8%A6%96%E5%9C%88/%E7%9C%8B%E9%9B%BB%E5%BD%B1/",
     "region": "新北市",
     "coverage": "directory-only",
-    "directoryOnly": true
+    "directoryOnly": true,
+    "atmoviesUrl": "https://www.atmovies.com.tw/showtime/t02e13/a02/"
   }
 ];
