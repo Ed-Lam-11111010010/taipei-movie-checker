@@ -225,7 +225,7 @@
 .page-movies .live-source-section,.page-movies #personal-import,.page-movies .demo-section-title,.page-movies .toolbar,.page-movies .layout{display:none;}
 .page-showtimes .movie-explorer,.page-showtimes .live-source-section{display:none;}
 .page-movies .advanced-import,.page-cinemas .advanced-import,.page-map .advanced-import{display:none;}
-.advanced-import{margin:24px 0;border:1px solid var(--line);border-radius:11px;background:var(--card);}
+.advanced-import{display:none!important;margin:24px 0;border:1px solid var(--line);border-radius:11px;background:var(--card);}
 .advanced-import>summary{cursor:pointer;font-size:13px;font-weight:750;padding:16px 19px;color:var(--ink);}
 .advanced-import>summary:hover{color:var(--purple);}
 .advanced-import #personal-import{margin:0!important;border:none!important;border-top:1px solid var(--line)!important;}
@@ -256,3 +256,13 @@
 .page-cinemas .venue-actions a{white-space:normal}
 .page-map #map-place-list{max-height:520px;overflow-y:auto}
 @media(max-width:700px){.page-map #map-place-list{max-height:290px}}
+
+/* Read-only synchronization diagnostics stay collapsed until visitors request details. */
+.developer-details{margin:12px 0 18px;border:1px solid var(--line);border-radius:11px;background:var(--card);overflow:hidden;}
+.developer-details>summary{padding:12px 16px;cursor:pointer;list-style:none;color:var(--muted);font-size:12px;font-weight:650;display:flex;justify-content:space-between;align-items:center;}
+.developer-details>summary::-webkit-details-marker{display:none;}
+.developer-details>summary::after{content:'⌄';font-size:18px;transition:transform .2s;}
+.developer-details[open]>summary::after{transform:rotate(180deg);}
+.developer-details>summary:focus-visible{outline:3px solid var(--purple);outline-offset:-3px;}
+.developer-details #source-health{padding:12px 16px;border-top:1px solid var(--line);white-space:pre-line;max-height:280px;overflow-y:auto;font-size:11px;line-height:1.7;margin:0;}
+.page-map .developer-details{display:none;}
