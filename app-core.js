@@ -32,7 +32,16 @@
       return [...connected,...additionalTheaters.filter(c=>!known.has(c.id)).map(c=>({...c,official:c.officialUrl,schedules:c.showtimesUrl}))];
     }
     let cinemas=hydrateCinemas(catalogue.cinemas);
-    let showings = catalogue.screenings;
+    // Present the plain title from linked government timetable cells, while
+    // retaining original source dates, movie IDs and official booking links.
+    function sanitizePublishedScreenings(records) {
+      return records.map(row => {
+        if (row.cinemaId !== 'fuzhong15' || typeof row.title !== 'string') return row;
+        const clean = row.title.replace(/\[([^\]]{1,120})\]\([^)]+\)/g, '$1').trim();
+        return clean === row.title ? row : {...row, title:clean};
+      });
+    }
+    let showings = sanitizePublishedScreenings(catalogue.screenings);
     let formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
     let selectedMovieKeys = [];
     function esc(value) { return String(value).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
@@ -459,7 +468,7 @@
         catalogue = validDemo ? rollingDemoCatalog(next) : next;
         latestPublicCatalog = catalogue;
         cinemas = hydrateCinemas(catalogue.cinemas);
-        showings = catalogue.screenings;
+        showings = sanitizePublishedScreenings(catalogue.screenings);
         formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
         const today = taipeiDateKey();
         if (selectedDate === taipeiTodayKey || selectedDate < today) selectedDate = today;
@@ -610,7 +619,7 @@
       demoPreviewActive = false;
       catalogue = latestPublicCatalog;
       cinemas = hydrateCinemas(catalogue.cinemas);
-      showings = catalogue.screenings;
+      showings = sanitizePublishedScreenings(catalogue.screenings);
       formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
       selectedMovieKeys = [];
       selectedDate = taipeiDateKey();
@@ -633,7 +642,7 @@
       demoPreviewActive = !demoPreviewActive;
       catalogue = demoPreviewActive ? rollingDemoCatalog(publicDemoCatalog) : latestPublicCatalog;
       cinemas = hydrateCinemas(catalogue.cinemas);
-      showings = catalogue.screenings;
+      showings = sanitizePublishedScreenings(catalogue.screenings);
       formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
       selectedMovieKeys = [];
       selectedDate = taipeiDateKey();
@@ -654,7 +663,7 @@
         taipeiTodayKey = today;
         if (!personalImportActive && demoPreviewActive) {
           catalogue = rollingDemoCatalog(publicDemoCatalog, today);
-          showings = catalogue.screenings;
+          showings = sanitizePublishedScreenings(catalogue.screenings);
           renderSourceStatus();
         }
         picker.min = today;
