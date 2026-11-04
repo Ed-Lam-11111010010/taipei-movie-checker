@@ -291,6 +291,22 @@ function parseAtmovies(md, cinema, date, url) {
   }
   if (matched < 1) throw new Error('No trustworthy atmovies rows');
 }
+// Read a cinema-specific online ticket portal only from its identity-matched
+// @movies venue page. Never guess a screening ID or accept arbitrary domains.
+function atmoviesTicketPortal(md, cinema) {
+  const expected = atmoviesFallback[cinema.id] || additionalAtmovies[cinema.id];
+  if (!expected || !md.includes(expected[1])) return null;
+  const header = md.split(/^###\s+20\d{2}\/\d{2}\/\d{2}/m)[0];
+  const match = /網路訂票\s*:\s*\[www\.ezding\.com\.tw\]\((https:\/\/[^)\s]+)\)/.exec(header);
+  if (!match) return null;
+  try {
+    const url = new URL(match[1]);
+    if (url.protocol !== 'https:' || url.hostname !== 'www.ezding.com.tw' ||
+        url.pathname !== '/cinemabooking' || url.username || url.password || url.port ||
+        url.hash || !/^[a-f0-9]{32}$/i.test(url.searchParams.get('cinemaid') || '')) return null;
+    return url.href;
+  } catch { return null; }
+}
 // 府中15 has an official municipal, month-scoped screening table instead of
 // ordinary per-movie schedules. Treat ticket/registration status as source data,
 // never as an available/guaranteed ticket.
@@ -354,7 +370,7 @@ async function run() {
   const sources = [];
   for (const cinema of allCinemas) {
     const newDirectory = !primaryCinemaIds.has(cinema.id);
-    let error = null, dates = [], before = output.length;
+    let error = null, dates = [], before = output.length, discoveredTicketPortal = null;
     const urls = [];
     if (newDirectory) {
       if (cinema.id==='fuzhong15') {
@@ -393,7 +409,11 @@ async function run() {
         if (kind === 'fuzhong') parseFuzhong(markdown,cinema,url);
         if (kind === 'vieshow') { parseVieshow(markdown, cinema); officialSucceeded = true; }
         if (kind === 'ambassador') parseAmbassador(markdown, cinema, day, url);
-        if (kind === 'atmovies') parseAtmovies(markdown, cinema, day, url);
+        if (kind === 'atmovies') {
+          parseAtmovies(markdown, cinema, day, url);
+          if (newDirectory && !discoveredTicketPortal)
+            discoveredTicketPortal = atmoviesTicketPortal(markdown, cinema);
+        }
       } catch (e) { error = (e instanceof Error ? e.message : String(e)).slice(0, 150); console.warn(cinema.id, day, error); }
     }
     const rows = output.slice(before);
@@ -403,6 +423,7 @@ async function run() {
       // Remove the directory-only flag; all movie links will now use verified rows.
       const {directoryOnly, coverage, referenceUrl, region, ...fields} = cinema;
       const promoted = { ...fields, showtimesUrl: rows[0].sourceUrl };
+      if (discoveredTicketPortal) promoted.ticketPortalUrl = discoveredTicketPortal;
       // Ticket portals are generic entry points, never a fabricated session link.
       if (cinema.id.startsWith('ambassador-'))
         promoted.ticketPortalUrl = 'https://booking.ambassador.com.tw/';
@@ -433,6 +454,11 @@ async function run() {
     ' venues; ' + syncedAdditional.length + '/26 added cinemas successfully parsed, ' + checkedAt);
 }
 function selftest() {
+  const sampleTicket = '永和喜樂時代影城\\n網路訂票: [www.ezding.com.tw](https://www.ezding.com.tw/cinemabooking?campaign_code=atmovie_cinemapage&channel=atmovie&cinemaid=c072c5c43fc011e9a245782bcb259cad)\\n### 2026/11/04 (三)'.replaceAll('\\n','\n');
+  if (atmoviesTicketPortal(sampleTicket, {id:'centuryasia-yonghe'}) !== 'https://www.ezding.com.tw/cinemabooking?campaign_code=atmovie_cinemapage&channel=atmovie&cinemaid=c072c5c43fc011e9a245782bcb259cad')
+    throw new Error('Verified cinema-specific ticket link fixture failed');
+  if (atmoviesTicketPortal(sampleTicket.replace('www.ezding.com.tw/cinemabooking','www.ezding.com.tw.evil.test/cinemabooking'),{id:'centuryasia-yonghe'}))
+    throw new Error('Untrusted ticket host accepted');
   const fake = { id:'vieshow-xinyi',name:'台北信義威秀影城',officialUrl:'https://www.vscinemas.com.tw/theater/detail.aspx?id=1' };
   const weekday = '日一二三四五六'[new Date(today + 'T00:00:00Z').getUTCDay()];
   const head = '<h2>場次查詢全台威秀影城隔週電影新場次</h2><p>' + today.slice(5,7) + '/' + today.slice(8) + ' (' + weekday + ')</p><p>*所有售票通路同步開放購票</p>';
