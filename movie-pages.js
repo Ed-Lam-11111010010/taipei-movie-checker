@@ -17,7 +17,8 @@
   const PORTALS = {
     vieshow: 'https://www.vscinemas.com.tw/vsTicketing/ticketing/ticket.aspx',
     ambassador: 'https://booking.ambassador.com.tw/',
-    showtime: 'https://www.showtimes.com.tw/cinemas/2/'
+    showtime: 'https://www.showtimes.com.tw/cinemas/2/',
+    showtimeRoot: 'https://www.showtimes.com.tw/'
   };
   function sourceLink(value) {
     try {
@@ -34,6 +35,8 @@
     if (cinema.id.startsWith('vieshow-') && cinema.ticketPortalUrl===PORTALS.vieshow) return {url:PORTALS.vieshow,direct:false};
     if (cinema.id.startsWith('ambassador-') && cinema.ticketPortalUrl===PORTALS.ambassador) return {url:PORTALS.ambassador,direct:false};
     if (cinema.id==='showtime-xinxin' && cinema.ticketPortalUrl===PORTALS.showtime) return {url:PORTALS.showtime,direct:false};
+    if (cinema.id.startsWith('showtime-') && cinema.ticketPortalUrl===PORTALS.showtimeRoot)
+      return {url:PORTALS.showtimeRoot,direct:false};
     return null;
   }
   function priceFor(row, cinema) {
