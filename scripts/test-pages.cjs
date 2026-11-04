@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, '..');
 const catalog = JSON.parse(fs.readFileSync(path.join(root, 'catalog.json'), 'utf8'));
 const pageNames = ['index.html', 'showtimes.html', 'cinemas.html', 'map.html'];
 const permittedFiles = new Set([...pageNames, 'app.css', 'movie-pages.css',
-  'demo-catalog.js', 'app-core.js', 'movie-pages.js']);
+  'demo-catalog.js', 'theater-directory.js', 'app-core.js', 'movie-pages.js']);
 const base = 'https://movie-checker.test/';
 const clock = Number.isFinite(Date.parse(catalog.checkedAt)) ?
   Date.parse(catalog.checkedAt) : Date.parse(catalog.screenings[0].startsAt);
@@ -36,7 +36,7 @@ async function loadPage(name) {
   const console = new VirtualConsole();
   console.on('jsdomError', e => errors.push(e?.message || String(e)));
   const OriginalDate = Date;
-  const html = fs.readFileSync(path.join(root, name), 'utf8');
+  const html = fs.readFileSync(path.join(root, name.split('?')[0]), 'utf8');
   const dom = new JSDOM(html, {
     url: base + name, resources: new OnlyLocalAssets(), runScripts: 'dangerously',
     pretendToBeVisual: true, virtualConsole: console,
@@ -106,20 +106,39 @@ async function test() {
   try {
     const {document}=cinemas.window;
     assert.equal(document.body.dataset.page,'cinemas');
-    assert.equal(document.querySelectorAll('#cinema-view .venue-card').length,12);
+    assert.equal(document.querySelectorAll('#cinema-view .venue-card').length,38);
+    assert.equal(document.querySelectorAll('#cinema-view .venue-card[data-coverage="directory"]').length,26);
+    assert.equal(document.querySelectorAll('#cinema-view .venue-card[data-coverage="synced"]').length,12);
+    assert.equal(document.querySelectorAll('#cinema-view .venue-card .venue-coverage').length,38);
     assert.ok(document.querySelector('#cinema-view a[href*="showtimes.html?cinema="]'),'cinema-to-showtime route');
     assert.ok(document.querySelector('#live-showtimes .cinema-source-group'),'external source directory');
-    console.log('PASS Cinemas: 12 cinema cards and official source directory');
+    console.log('PASS Cinemas: 25 Taipei City + 13 New Taipei entries; 12 synchronized and 26 directory-only');
   } finally { cinemas.window.close(); }
+
+  const unconnected=await loadPage('showtimes.html?cinema=miramar-dazhi');
+  try {
+    const {document}=unconnected.window;
+    assert.equal(document.getElementById('cinema').value,'miramar-dazhi');
+    assert.equal(document.querySelectorAll('#screening-view .screening-card').length,0);
+    assert.ok(document.getElementById('empty-state').textContent.includes('尚未串接'));
+    assert.ok(document.querySelector('#empty-state a[href*="miramarcinemas"]'));
+    console.log('PASS Unconnected cinema: no invented showtimes or booking links');
+  } finally { unconnected.window.close(); }
 
   const map=await loadPage('map.html');
   try {
     const {document}=map.window;
     assert.equal(document.body.dataset.page,'map');
     assert.ok(!document.getElementById('map-layout').classList.contains('hidden'),'map view shown');
-    assert.equal(document.querySelectorAll('#map-place-list .map-place').length,12);
+    assert.equal(document.querySelectorAll('#map-place-list .map-place').length,38);
+    assert.ok(document.getElementById('map-cinema-status').textContent.includes('已接入'));
     assert.ok(document.getElementById('map-showtimes').href.includes('showtimes.html?cinema='));
-    console.log('PASS Map: 12 map destinations and link back to showtimes');
+    const unsyncedButton=document.querySelector('#map-place-list [data-cinema-id="miramar-dazhi"]');
+    assert.ok(unsyncedButton,'Miramar included in map');
+    unsyncedButton.click();
+    assert.ok(document.getElementById('map-cinema-status').textContent.includes('尚未接入'));
+    assert.ok(document.getElementById('map-showtimes').href.includes('miramarcinemas.tw'));
+        console.log('PASS Map: 38 map destinations with coverage labels and showtime links');
   } finally { map.window.close(); }
 }
 test().catch(err => {console.error(err.stack || err);process.exitCode = 1;});
