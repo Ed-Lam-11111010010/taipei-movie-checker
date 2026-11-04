@@ -13,9 +13,20 @@ Movie Checker 現在分成四個**真正獨立的網頁網址**，不再把每�
 | 影城 | `cinemas.html` | 影城清單、地址、官方來源；「本站場次」連到已預選影城的時刻表 |
 | 地圖 | `map.html` | 地圖選擇影城、行政區篩選與直接查看該影城場次 |
 
-技術架構將原先單一大型 `index.html` 拆成共用 `app.css`、`app-core.js`、`movie-pages.js`、`movie-pages.css` 與 `demo-catalog.js`，四個 HTML 只共用介面結構，各自提供清楚的頁面定位；都讀取同一份定期發布的 `catalog.json`，不會出現各頁場次各自過期的問題。
+技術架構將原先單一大型 `index.html` 拆成共用 `app.css`、`app-core.js`、`theater-directory.js`、`movie-pages.js`、`movie-pages.css` 與 `demo-catalog.js`，四個 HTML 只共用介面結構，各自提供清楚的頁面定位；都讀取同一份定期發布的 `catalog.json`，不會出現各頁場次各自過期的問題。
 
 原本 672 筆虛構資料仍只能用於明確標示的介面測試，已移至獨立的 `demo-catalog.js`，不會被混入真實來源快照。CSV 個人匯入放到**時刻表 → 進階測試工具**，保持一般使用者畫面簡潔。
+
+## 台北／新北影城完整性清查（2026-11-04）
+
+以 2026 年 9 月整理的 [台北 25 間影城名單](https://unclewriterfilm.com/cinema/taipei-cinemas/) 及 [新北市政府電影場所資訊](https://www.info.ntpc.gov.tw/%E6%96%B0%E5%8C%97%E5%BD%B1%E8%A6%96%E5%9C%88/%E7%9C%8B%E9%9B%BB%E5%BD%B1/)、[Moovie Time 影城清單](https://www.moovietime.com/cinemas) 比對，網站目前納入 **38 個影城／放映場地**：
+
+- **台北市 25 間**：涵蓋大型連鎖、獨立影城、藝術電影館與景美佳佳二輪戲院。
+- **新北市 13 間**：沿用原先 4 間威秀，新增包括三重天台、喜樂時代永和、土城秀泰、府中15、新莊晶冠國賓、新莊鴻金寶麻吉、林口昕境國賓、淡水禮萊國賓與樹林秀泰等 9 處。
+
+**「納入影城名錄」不等於「取得該影城電影場次」。** 原本的 12 間影城仍由 `catalog.json` 維持排程同步；新加入的 **26 間目前僅有可查詢的影城地址、外部網站／場次入口與地圖，不提供本站自動時間、票價或訂票連結**，以「已收錄影城・尚未串接場次」清楚標示。未接入者不會列為「0 場」或被塞入測試資料。使用者從地圖點選尚未串接的影城，將連到外部網站；已同步的影城可跳轉本站時刻表。
+
+新增名錄單獨存於 `theater-directory.js`，不寫入自動更新的 `catalog.json`；避免每次 GitHub Actions 跑完覆蓋掉新影城。這是公開名錄的覆蓋性清查，**不是對營業狀態的即時全面保證**；暫停營業、短期影展、私人放映空間或新開幕影城可能需要再確認與補登。未提供官方網站的場館會改列第三方資訊來源而不假稱官方。
 
 ## 依電影瀏覽與官方訂票（Movie-first）
 
@@ -73,6 +84,6 @@ GitHub Pages 會在進入網站時讀取同目錄的 `catalog.json`，**預設�
 
 ## 公開檔案與來源
 
-GitHub Pages 網頁資產包含四個主頁 `index.html`、`showtimes.html`、`cinemas.html`、`map.html`，共用資產 `app.css`、`app-core.js`、`demo-catalog.js`、`movie-pages.js`、`movie-pages.css`，以及 `catalog.json`、`README.md` 和 `.nojekyll`。自動更新使用 `.github/workflows/sync-showtimes.yml` 與 `scripts/sync-showtimes.cjs`，不包含 API 密鑰或私人同步設定。
+GitHub Pages 網頁資產包含四個主頁 `index.html`、`showtimes.html`、`cinemas.html`、`map.html`，共用資產 `app.css`、`app-core.js`、`theater-directory.js`、`demo-catalog.js`、`movie-pages.js`、`movie-pages.css`，以及 `catalog.json`、`README.md` 和 `.nojekyll`。自動更新使用 `.github/workflows/sync-showtimes.yml` 與 `scripts/sync-showtimes.cjs`，不包含 API 密鑰或私人同步設定。
 
 來源網站內容可能受到各網站的使用條款與更新政策規範。這個小型個人 POC 只顯示必要的事實性場次欄位及來源連結，不代理售票、不保證資料完整性或使用權；如來源條款不允許持續自動存取，應停用相關解析來源。
