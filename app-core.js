@@ -27,7 +27,7 @@
     const originalFooterDescription = document.querySelector('footer p:last-child').textContent;
     const additionalTheaters=Array.isArray(window.MOVIE_CHECKER_ADDITIONAL_THEATERS)?window.MOVIE_CHECKER_ADDITIONAL_THEATERS.filter(x=>x?.directoryOnly===true):[];
     function hydrateCinemas(rows) {
-      const connected=rows.map(c=>({...c,official:c.officialUrl,schedules:c.showtimesUrl,directoryOnly:false}));
+      const connected=rows.map(c=>({...c,ticketPortalUrl:c.ticketPortalUrl || additionalTheaters.find(t=>t.id===c.id)?.ticketPortalUrl,official:c.officialUrl,schedules:c.showtimesUrl,directoryOnly:false}));
       const known=new Set(connected.map(c=>c.id));
       return [...connected,...additionalTheaters.filter(c=>!known.has(c.id)).map(c=>({...c,official:c.officialUrl,schedules:c.showtimesUrl}))];
     }
@@ -256,7 +256,7 @@
         const reference = typeof window.moviePriceFor === "function" ? window.moviePriceFor(item, cinema) : null;
         const fromSource = sourceMode() && !item.isDemo && typeof window.movieSourceLink === "function" ? window.movieSourceLink(item.sourceUrl) : null;
         const priceMarkup = reference ? `<span class="screening-price" title="${esc(reference.note)}">${esc(reference.value)}</span>` : "";
-        const ticketAction = ticket ? `<a class="action-link" href="${esc(ticket.url)}" title="${esc(ticket.direct ? "原始場次訂票連結" : "請在影城平台重新選擇影城、電影、日期與場次")}" target="_blank" rel="noopener noreferrer">官方訂票 ↗</a>` : "";
+        const ticketAction = ticket ? `<a class="action-link" href="${esc(ticket.url)}" title="${esc(ticket.direct ? "原始場次訂票連結" : ticket.infoOnly ? "請在來源頁確認購票方式，不保證線上售票" : "請在訂票平台重新選擇影城、電影、日期與場次")}" target="_blank" rel="noopener noreferrer">${esc(ticket.label)}</a>` : "";
         const sourceAction = fromSource ? `<a class="map-quick-link" href="${esc(fromSource)}" target="_blank" rel="noopener noreferrer">核對場次 ↗</a>` : "";
         const variantKey = movieVersionKey(item);
         const startsGroup = sortSelect.value !== 'time' && (index === 0 || movieVersionKey(items[index - 1]) !== variantKey);
@@ -289,6 +289,8 @@
         const schedule=cinema.schedules?.startsWith('https://')?
           '<a href="'+esc(cinema.schedules)+'" target="_blank" rel="noopener noreferrer">'+(synced?'來源場次 ↗':'外部資訊 ↗')+'</a>':'';
         const local=synced?'<a href="./showtimes.html?cinema='+encodeURIComponent(cinema.id)+'">本站場次 →</a>':'';
+        const ticket=typeof window.movieBookingFor==='function' ? window.movieBookingFor({cinemaId:cinema.id,isDemo:false},cinema) : null;
+        const booking=ticket?'<a href="'+esc(ticket.url)+'" target="_blank" rel="noopener noreferrer" title="請於來源頁確認可用場次及購票方式">'+esc(ticket.label)+'</a>':'';
         return '<article class="venue-card" data-coverage="'+(synced?'synced':'directory')+'">'+
           '<span class="venue-kicker">'+(cinema.address.startsWith('台北市')?'台北市':'新北市')+' · '+esc(cinema.chain)+' · '+esc(cinema.district)+'</span>'+
           '<h3>'+esc(cinema.name)+'</h3>'+
@@ -296,7 +298,7 @@
           (synced?'已接入場次來源':'已收錄影城・尚未串接場次')+'</span>'+
           '<p>'+esc(cinema.address)+'<br>'+(synced?('選定日期有 '+count+' 筆已取得場次；沒有資料不代表停映。'):'目前不提供自動場次；請前往來源網站核對。')+'</p>'+
           '<div class="venue-actions"><a class="map-link" href="'+mapsSearch(cinema)+'" target="_blank" rel="noopener noreferrer">Google Maps ↗</a>'+
-          official+local+schedule+'</div></article>';
+          official+local+booking+schedule+'</div></article>';
       }).join('');
       list.classList.toggle('hidden',selectedView!=='cinemas');
     }
