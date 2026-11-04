@@ -361,12 +361,10 @@ async function run() {
         urls.push([today,'https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260','fuzhong']);
       } else {
         const atmoviesId=additionalAtmovies[cinema.id][0];
-        // A few independent theaters publish a valid latest-date timetable at
-        // the stable theater page, but not at the explicit YYYYMMDD URL.
-        if (['governor-taipei','broadway-gongguan','jingmei-jiajia','tiantai-sanchong'].includes(cinema.id)) {
-          urls.push([today,'https://www.atmovies.com.tw/showtime/'+atmoviesId+'/a02/','atmovies']);
-        }
-        // Read at most two days for newly connected cinema venues.
+        // The stable venue page often contains today's times when explicit
+        // YYYYMMDD pages do not; parse only if its heading is exactly today.
+        urls.push([today,'https://www.atmovies.com.tw/showtime/'+atmoviesId+'/a02/','atmovies']);
+        // In addition check two explicit calendar dates for future sessions.
         for (let d=0;d<2;d++) {
           const day=addDays(today,d);
           urls.push([day,'https://www.atmovies.com.tw/showtime/'+atmoviesId+
