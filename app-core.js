@@ -547,12 +547,16 @@
       document.querySelector('.demo-section-title h2').textContent = fromSources ? '已取得的電影場次' : active ? '個人匯入場次' : '網站介面測試';
       document.querySelector('.demo-section-title p').textContent = active
         ? '目前顯示個人匯入的場次，未經網站驗證，日期與時間為台北時間。'
-        : fromSources ? '以下為已發布的部分影城來源快照（不是即時服務），點「查看場次」前往原站核對；其他影城仍可從上方來源入口前往查詢。'
+        : fromSources ? '以下是已發布的影城場次快照（不是即時服務），可由影城頁的影城卡查看各影城外部來源；尚未串接者不代表無電影上映。'
         : originalDemoDescription;
       document.querySelector('footer p:last-child').textContent = active
         ? '此瀏覽器暫時顯示個人匯入的資料，並非官方同步；重新整理後會回到已發布的來源快照。'
         : fromSources ? '本站資料來自來源網站的有限快照，實際日期、時刻與售票狀態請以各影城當下公告為準。' : originalFooterDescription;
       document.querySelector('.demo-label').textContent = active ? 'PERSONAL CSV · UNVERIFIED' : fromSources ? 'SOURCE SNAPSHOT · PARTIAL' : 'TEST PREVIEW · SYNTHETIC DATA';
+      const liveCountLabel = document.querySelector('.film-explorer-kicker');
+      if (liveCountLabel) liveCountLabel.textContent = fromSources
+        ? catalogue.cinemas.length + ' 間影城已接入電影時刻'
+        : active ? '個人匯入資料 · 未經驗證' : '虛構測試資料';
       document.getElementById('toggle-demo-preview').textContent = demoPreviewActive ? '返回來源場次' : '查看虛構測試資料';
       document.getElementById('toggle-demo-preview').setAttribute('aria-pressed', String(demoPreviewActive));
       document.getElementById('toggle-demo-preview').disabled = active;
