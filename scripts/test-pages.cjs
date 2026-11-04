@@ -68,7 +68,7 @@ async function loadPage(name) {
   return dom;
 }
 async function test() {
-  assert.equal(catalog.cinemas.length, 12);
+  assert.ok(catalog.cinemas.length >= 12 && catalog.cinemas.length <= 38, 'synced cinema count');
   assert.ok(catalog.screenings.length > 100);
   const movies = await loadPage('index.html');
   try {
@@ -107,23 +107,34 @@ async function test() {
     const {document}=cinemas.window;
     assert.equal(document.body.dataset.page,'cinemas');
     assert.equal(document.querySelectorAll('#cinema-view .venue-card').length,38);
-    assert.equal(document.querySelectorAll('#cinema-view .venue-card[data-coverage="directory"]').length,26);
-    assert.equal(document.querySelectorAll('#cinema-view .venue-card[data-coverage="synced"]').length,12);
+    assert.equal(document.querySelectorAll('#cinema-view .venue-card[data-coverage="directory"]').length,38-catalog.cinemas.length);
+    assert.equal(document.querySelectorAll('#cinema-view .venue-card[data-coverage="synced"]').length,catalog.cinemas.length);
     assert.equal(document.querySelectorAll('#cinema-view .venue-card .venue-coverage').length,38);
     assert.ok(document.querySelector('#cinema-view a[href*="showtimes.html?cinema="]'),'cinema-to-showtime route');
     assert.ok(document.querySelector('#live-showtimes .cinema-source-group'),'external source directory');
-    console.log('PASS Cinemas: 25 Taipei City + 13 New Taipei entries; 12 synchronized and 26 directory-only');
+    console.log('PASS Cinemas: 25 Taipei City + 13 New Taipei entries; '+catalog.cinemas.length+' synchronized and '+(38-catalog.cinemas.length)+' directory-only');
   } finally { cinemas.window.close(); }
 
-  const unconnected=await loadPage('showtimes.html?cinema=miramar-dazhi');
-  try {
-    const {document}=unconnected.window;
-    assert.equal(document.getElementById('cinema').value,'miramar-dazhi');
-    assert.equal(document.querySelectorAll('#screening-view .screening-card').length,0);
-    assert.ok(document.getElementById('empty-state').textContent.includes('尚未串接'));
-    assert.ok(document.querySelector('#empty-state a[href*="miramarcinemas"]'));
-    console.log('PASS Unconnected cinema: no invented showtimes or booking links');
-  } finally { unconnected.window.close(); }
+  // The source sync may promote any subset of the 26 theaters after validation.
+  // Test unsynced behavior using a cinema the latest catalog has NOT promoted.
+  const directoryCode=fs.readFileSync(path.join(root,'theater-directory.js'),'utf8');
+  const directoryMatch=/window\.MOVIE_CHECKER_ADDITIONAL_THEATERS\s*=\s*(\[[\s\S]*?\]);\s*$/.exec(directoryCode);
+  assert.ok(directoryMatch,'valid directory JSON');
+  const directory=JSON.parse(directoryMatch[1]);
+  assert.equal(directory.length,26);
+  const syncedIds=new Set(catalog.cinemas.map(c=>c.id));
+  const candidate=directory.find(c=>!syncedIds.has(c.id));
+  if (candidate) {
+    const unconnected=await loadPage('showtimes.html?cinema='+encodeURIComponent(candidate.id));
+    try {
+      const {document}=unconnected.window;
+      assert.equal(document.getElementById('cinema').value,candidate.id);
+      assert.equal(document.querySelectorAll('#screening-view .screening-card').length,0);
+      assert.ok(document.getElementById('empty-state').textContent.includes('尚未串接'));
+      assert.ok(document.querySelector('#empty-state a[href^="https://"]'));
+      console.log('PASS Unconnected cinema:',candidate.id,'has no invented showtimes or booking links');
+    } finally { unconnected.window.close(); }
+  }
 
   const map=await loadPage('map.html');
   try {
@@ -133,11 +144,20 @@ async function test() {
     assert.equal(document.querySelectorAll('#map-place-list .map-place').length,38);
     assert.ok(document.getElementById('map-cinema-status').textContent.includes('已接入'));
     assert.ok(document.getElementById('map-showtimes').href.includes('showtimes.html?cinema='));
-    const unsyncedButton=document.querySelector('#map-place-list [data-cinema-id="miramar-dazhi"]');
-    assert.ok(unsyncedButton,'Miramar included in map');
-    unsyncedButton.click();
-    assert.ok(document.getElementById('map-cinema-status').textContent.includes('尚未接入'));
-    assert.ok(document.getElementById('map-showtimes').href.includes('miramarcinemas.tw'));
+    if(candidate){
+      const unsyncedButton=document.querySelector('#map-place-list [data-cinema-id="'+candidate.id+'"]');
+      assert.ok(unsyncedButton,'unconnected cinema on map');
+      unsyncedButton.click();
+      assert.ok(document.getElementById('map-cinema-status').textContent.includes('尚未接入'));
+      assert.ok(document.getElementById('map-showtimes').href.startsWith('https://'));
+    }
+    const promoted=directory.find(c=>syncedIds.has(c.id));
+    if(promoted){
+      const connectedButton=document.querySelector('#map-place-list [data-cinema-id="'+promoted.id+'"]');
+      assert.ok(connectedButton,'promoted cinema on map');
+      connectedButton.click();
+      assert.ok(document.getElementById('map-showtimes').href.includes('showtimes.html?cinema='));
+    }
         console.log('PASS Map: 38 map destinations with coverage labels and showtime links');
   } finally { map.window.close(); }
 }
