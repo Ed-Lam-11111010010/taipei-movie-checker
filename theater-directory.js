@@ -262,6 +262,7 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "新北市永和區",
     "address": "新北市永和區中山路一段238號4樓",
     "officialUrl": "https://beyond.centuryasia.com.tw/",
+    "ticketPortalUrl": "https://www.ezding.com.tw/cinemabooking?campaign_code=atmovie_cinemapage&channel=atmovie&cinemaid=c072c5c43fc011e9a245782bcb259cad",
     "showtimesUrl": "https://www.atmovies.com.tw/showtime/t02e17/a02/",
     "referenceUrl": "https://www.info.ntpc.gov.tw/%E6%96%B0%E5%8C%97%E5%BD%B1%E8%A6%96%E5%9C%88/%E7%9C%8B%E9%9B%BB%E5%BD%B1/",
     "region": "新北市",
