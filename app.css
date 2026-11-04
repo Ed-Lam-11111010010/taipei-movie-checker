@@ -243,3 +243,16 @@
 .page-map .map-route-link{display:inline-block;margin-top:10px;padding:10px 12px;border-radius:7px;background:var(--ink);color:var(--acid);font-size:12px;font-weight:750;text-decoration:none;}
 .page-cinemas .live-source-section{background:transparent;}
 @media(max-width:760px){.topbar{align-items:flex-start;}.topbar .demo-label{display:none}.site-nav{width:100%;justify-content:space-between}.site-nav a{padding:9px;flex:1;text-align:center;font-size:11px}.hero{padding-top:26px}.page-jump-grid{grid-template-columns:1fr;}}
+
+/* Directory-only cinema entries are never represented as zero-film cinemas. */
+.venue-coverage{align-self:flex-start;margin:0 0 11px;padding:6px 9px;border-radius:7px;font-size:10px;font-weight:800;letter-spacing:.01em}
+.venue-covered{background:#e4f2dc;color:#284c31}
+.venue-unconnected{background:#f4e9d6;color:#6f511f}
+.map-status-note{font-size:12px;color:var(--muted);line-height:1.6;margin:7px 0}
+.map-place small{display:block;margin-top:3px;font-size:10px;color:var(--muted)}
+.page-cinemas .venue-card[data-coverage="directory"]{background:#faf8f1}
+.page-cinemas .venue-card p{min-height:54px}
+.page-cinemas .venue-actions{display:flex;flex-wrap:wrap;gap:8px}
+.page-cinemas .venue-actions a{white-space:normal}
+.page-map #map-place-list{max-height:520px;overflow-y:auto}
+@media(max-width:700px){.page-map #map-place-list{max-height:290px}}
