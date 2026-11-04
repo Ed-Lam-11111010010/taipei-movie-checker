@@ -16,7 +16,7 @@
           date, sourceBusinessDate: date, startsAt: date + 'T' + item.time + ':00+08:00' };
       }) };
     }
-    let catalogue = rollingDemoCatalog(baseDemoCatalog);
+    let catalogue = hostedSnapshot ? {...baseDemoCatalog, mode:'loading', screenings:[], sources:[], checkedAt:null} : rollingDemoCatalog(baseDemoCatalog);
     const publicDemoCatalog = baseDemoCatalog;
     let latestPublicCatalog = catalogue;
     let demoPreviewActive = false;
@@ -442,8 +442,8 @@
         detail.textContent = '只顯示已取得的場次，未取得不代表沒有放映。' + (stale ? '目前快照超過 12 小時或時間不明，請優先前往官方影城確認。\n' : '\n') +
           catalogue.sources.map(s => (cinemas.find(c=>c.id===s.cinemaId)?.name || s.cinemaId) + '：' + s.message).join('\n');
       } else {
-        summary.textContent = (prefix || '虛構測試快照') + '・僅用於介面測試（無影城同步）';
-        detail.textContent = '以下場次全部虛構；可點擊「重新載入已發布場次」查看來源快照。';
+        summary.textContent = hostedSnapshot ? '等待正式電影場次資料' : '本機測試資料（非公開場次）';
+        detail.textContent = hostedSnapshot ? '尚未成功載入公開場次，請按重新載入已發布場次。' : '本機開發測試資料。';
       }
       updatePageSummary();
     }
@@ -460,7 +460,7 @@
         const response = await fetch(endpoint, { cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(120000) });
         if (!response.ok) throw new Error('更新服務暫時無法回應');
         const next = await response.json();
-        const validDemo = next.mode === 'personal-local' && next.screenings.every(item => item.isDemo === true);
+        const validDemo = !hostedSnapshot && next.mode === 'personal-local' && next.screenings.every(item => item.isDemo === true);
         const validSource = next.mode === 'source-snapshot' && next.screenings.every(item => item.isDemo === false && item.sourceUrl && /^https:\/\//.test(item.sourceUrl));
         if (next.schemaVersion !== 1 || !Array.isArray(next.cinemas) || !Array.isArray(next.screenings) || !Array.isArray(next.sources) ||
             !next.screenings.length || !(validDemo || validSource)) throw new Error('場次格式不正確，已保留原資料');
@@ -551,26 +551,20 @@
     function setPersonalMode(active) {
       const fromSources = !active && sourceMode();
       document.querySelector('.demo-banner div').innerHTML = active
-        ? '<b>個人場次預覽｜非官方同步</b>目前顯示此瀏覽器匯入的 CSV，資料不會上傳到 GitHub。請至原站核對。'
-        : fromSources
-          ? '<b>已載入來源場次快照｜不是即時訂票資料</b>目前顯示部分影城已核對的電影與時間，標示查核日期及來源；未成功取得的影城請點來源連結核對。'
-          : originalDemoBanner;
-      document.querySelector('.demo-section-title h2').textContent = fromSources ? '已取得的電影場次' : active ? '個人匯入場次' : '網站介面測試';
+        ? '<b>個人匯入資料（未驗證）</b>此瀏覽器的個人資料未經影城核對。'
+        : '<b>場次資訊僅供參考</b>放映時間、票價與可購買狀態請以影城或售票平台為準。';
+      document.querySelector('.demo-section-title h2').textContent = fromSources ? '已取得的電影場次' : active ? '個人匯入場次' : '電影場次查詢';
       document.querySelector('.demo-section-title p').textContent = active
-        ? '目前顯示個人匯入的場次，未經網站驗證，日期與時間為台北時間。'
-        : fromSources ? '以下是已發布的影城場次快照（不是即時服務），可由影城頁的影城卡查看各影城外部來源；尚未串接者不代表無電影上映。'
-        : originalDemoDescription;
+        ? '顯示個人匯入的場次，尚未經影城官方驗證。'
+        : '以下是公開來源的定期場次快照，未取得場次不代表沒有放映。';
       document.querySelector('footer p:last-child').textContent = active
-        ? '此瀏覽器暫時顯示個人匯入的資料，並非官方同步；重新整理後會回到已發布的來源快照。'
-        : fromSources ? '本站資料來自來源網站的有限快照，實際日期、時刻與售票狀態請以各影城當下公告為準。' : originalFooterDescription;
-      document.querySelector('.demo-label').textContent = active ? 'PERSONAL CSV · UNVERIFIED' : fromSources ? 'SOURCE SNAPSHOT · PARTIAL' : 'TEST PREVIEW · SYNTHETIC DATA';
+        ? '目前顯示此瀏覽器匯入的個人資料。'
+        : '資料為來源網站的有限快照，實際時刻、票價與售票情況請以影城公告為準。';
+      document.querySelector('.demo-label').textContent = active ? '個人資料 · 未驗證' : fromSources ? '已發布場次' : '場次載入中';
       const liveCountLabel = document.querySelector('.film-explorer-kicker');
       if (liveCountLabel) liveCountLabel.textContent = fromSources
         ? catalogue.cinemas.length + ' 間影城已接入電影時刻'
-        : active ? '個人匯入資料 · 未經驗證' : '虛構測試資料';
-      document.getElementById('toggle-demo-preview').textContent = demoPreviewActive ? '返回來源場次' : '查看虛構測試資料';
-      document.getElementById('toggle-demo-preview').setAttribute('aria-pressed', String(demoPreviewActive));
-      document.getElementById('toggle-demo-preview').disabled = active;
+        : active ? '個人匯入 · 未驗證' : '正在讀取影城場次';
       document.getElementById('personal-import-reset').disabled = !active;
       document.getElementById('refresh-catalog').disabled = active;
     }
@@ -639,18 +633,7 @@
     });
 
     document.getElementById('refresh-catalog').addEventListener('click', refreshCatalog);
-    document.getElementById('toggle-demo-preview').addEventListener('click', () => {
-      if (personalImportActive) return;
-      demoPreviewActive = !demoPreviewActive;
-      catalogue = demoPreviewActive ? rollingDemoCatalog(publicDemoCatalog) : latestPublicCatalog;
-      cinemas = hydrateCinemas(catalogue.cinemas);
-      showings = sanitizePublishedScreenings(catalogue.screenings);
-      formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
-      selectedMovieKeys = [];
-      selectedDate = taipeiDateKey();
-      setPersonalMode(false);
-      buildDates(); buildFilters(); render(); renderSourceStatus();
-    });
+
     setPersonalMode(false);
     renderSourceStatus();
     buildDates(); buildFilters();
