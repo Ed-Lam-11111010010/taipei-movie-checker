@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="./app.css">
 <link rel="stylesheet" href="./movie-pages.css">
 <script defer src="./demo-catalog.js"></script>
+<script defer src="./theater-directory.js"></script>
 <script defer src="./app-core.js"></script>
 <script defer src="./movie-pages.js"></script>
 <meta name="movie-checker-hosting" content="snapshot"></head>
@@ -34,7 +35,7 @@
           <p class="eyebrow">台北市・電影場次探索</p>
           <h1 id="main-title">在城市地圖上，<br>找一場電影。</h1>
         </div>
-        <p class="hero-note"><strong>個人非商業 POC · 台北及鄰近地區</strong><br>依行政區和影城快速找到地點，查看 Google Maps 與對應的本站場次。 本站不代收款項。</p>
+        <p class="hero-note"><strong>個人非商業 POC · 台北及鄰近地區</strong><br>台北市及新北市影城位置一覽；已串接者可直接查看本站場次，尚未串接者開啟外部影城資訊。 本站不代收款項。</p>
       </section>
 
       <aside class="demo-banner" aria-label="場次資料說明">
@@ -108,7 +109,7 @@
           <div id="source-health" class="filter-foot" style="white-space:pre-line;margin:0 0 16px"></div><label class="field" id="extra-date-field" style="margin:0 0 16px"><span id="date-scope-note">其他日期（含預售場次）</span><input id="date-picker" type="date"></label><div id="screening-view" class="screening-list"></div>
           <div id="cinema-view" class="venue-list hidden"></div>
           <div id="map-layout" class="map-layout hidden">
-            <div class="map-destination"><span class="venue-kicker">GOOGLE MAPS · 地點導覽</span><h3 id="map-selected-name"></h3><p id="map-selected-address"></p><iframe id="theatre-map" class="theatre-map" title="Google Maps 影城位置" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe><span class="map-hint">可直接在此拖曳、縮放與查看位置；選擇其他影城會切換地圖。地圖由 Google 提供。</span><a id="map-launch" class="map-open" target="_blank" rel="noopener noreferrer">地圖無法載入？在 Google Maps 查看 ↗</a><a id="map-showtimes" class="map-route-link" href="./showtimes.html">查看這間影城場次 →</a></div>
+            <div class="map-destination"><span class="venue-kicker">GOOGLE MAPS · 地點導覽</span><h3 id="map-selected-name"></h3><p id="map-selected-address"></p><p id="map-cinema-status" class="map-status-note" aria-live="polite"></p><iframe id="theatre-map" class="theatre-map" title="Google Maps 影城位置" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe><span class="map-hint">可直接在此拖曳、縮放與查看位置；選擇其他影城會切換地圖。地圖由 Google 提供。</span><a id="map-launch" class="map-open" target="_blank" rel="noopener noreferrer">地圖無法載入？在 Google Maps 查看 ↗</a><a id="map-showtimes" class="map-route-link" href="./showtimes.html">查看這間影城場次 →</a></div>
             <div class="map-venues"><h3>選擇影城</h3><div id="map-place-list"></div></div>
           </div>
           <p id="empty-state" class="empty hidden">目前沒有符合條件的未開演場次。請調整日期或篩選，並查看來源狀態；未取得資料不代表沒有放映。</p>
@@ -132,8 +133,8 @@
   <p id="personal-import-status" role="status" aria-live="polite" style="margin:8px 0 0;font-weight:600;"></p>
 </section></details>
       <section class="live-source-section" id="live-showtimes" aria-labelledby="live-showtimes-title">
- <div class="live-source-heading"><div><p class="eyebrow">SOURCE LINKS · 影城資訊</p><h2 id="live-showtimes-title">電影院官方網址</h2></div>
- <p>按下影城集團名稱即可展開各戲院場次網址。外部頁面提供最新公布資訊；本站提供<strong>已發布的來源場次快照</strong>，部分影城以開眼電影網備援，實際購票資訊以影城公告為準。</p></div>
+ <div class="live-source-heading"><div><p class="eyebrow">SOURCE LINKS · 影城資訊</p><h2 id="live-showtimes-title">已接入場次同步的影城來源</h2></div>
+ <p>這裡列出<strong>已接入自動場次的 12 間影城</strong>來源。上方影城名錄另包含尚未接入同步的影城；後者不會出現虛構場次。部分影城使用開眼電影網備援，購票前請至原站確認。</p></div>
  <div class="cinema-source-accordion" aria-label="依影城集團展開網址"><details class="cinema-source-group">
  <summary><span class="cinema-source-summary-main"><span class="cinema-source-dot" aria-hidden="true"></span><span class="cinema-source-summary-text"><strong>威秀影城</strong><small>9 間影城 · 台北、新北</small></span></span><span class="cinema-source-action"><span class="cinema-source-action-label">顯示影城網址</span><span class="cinema-source-chevron" aria-hidden="true">⌄</span></span></summary>
  <div class="live-cinema-grid"><article class="live-cinema-card"><span class="live-cinema-meta">信義區</span><h4>台北信義威秀影城</h4><p>台北市信義區松壽路20號</p><a href="https://www.vscinemas.com.tw/theater/detail.aspx?id=1" target="_blank" rel="noopener noreferrer" aria-label="開啟台北信義威秀影城的威秀官方影城頁">威秀官方影城頁 ↗</a></article>
