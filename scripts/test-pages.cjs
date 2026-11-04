@@ -63,6 +63,15 @@ async function loadPage(name) {
   if (errors.length) throw new Error(name + ': ' + errors.join('\n'));
   assert.equal(win.document.querySelectorAll('.site-nav a[aria-current="page"]').length, 1, 'one active nav');
   assert.equal(win.document.querySelectorAll('.demo-label').length, 1);
+  assert.equal(win.document.querySelectorAll('#toggle-demo-preview').length,0,'no public demo switch');
+  assert.ok(!win.document.querySelector('.demo-banner').textContent.includes('虛構'),'public banner should describe source data');
+  const sourceDetail=win.document.getElementById('source-details');
+  assert.ok(sourceDetail && sourceDetail.contains(win.document.getElementById('source-health')),'read-only sync logs accessible');
+  assert.equal(sourceDetail.open,false,'source logs collapsed by default');
+  const importer=win.document.querySelector('.advanced-import');
+  assert.ok(importer,'internal CSV import structure can remain for future work');
+  assert.equal(win.getComputedStyle(importer).display,'none','no visible demo or test importer');
+
   assert.equal(win.document.querySelectorAll('[id]').length,
     new Set([...win.document.querySelectorAll('[id]')].map(el => el.id)).size, 'unique IDs');
   return dom;
