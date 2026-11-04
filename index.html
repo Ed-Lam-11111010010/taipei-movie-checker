@@ -25,7 +25,7 @@
           <a href="./cinemas.html" data-nav="cinemas">影城</a>
           <a href="./map.html" data-nav="map">地圖</a>
         </nav>
-        <span class="demo-label">SOURCE SNAPSHOT · CHECKING</span>
+        <span class="demo-label">場次載入中</span>
       </div>
     </header>
 
@@ -40,7 +40,7 @@
 
       <aside class="demo-banner" aria-label="場次資料說明">
         <span class="demo-icon" aria-hidden="true">!</span>
-        <div><b>個人非商業 POC｜全部電影與場次皆為虛構</b>這是用於測試搜尋、篩選、排序、影城和地圖功能的模擬資料。並非官方電影放映時間，請勿依此訂票或安排行程。「更新場次」僅重新載入這份測試快照。</div>
+        <div><b>場次資訊僅供參考</b>放映時間可能變更，請於影城或售票平台確認最新時間、票價與可購買狀態。</div>
       </aside>
 
       
@@ -65,7 +65,7 @@
 </section>
 <div class="page-jump-grid" aria-label="其他瀏覽方式">
   <a href="./showtimes.html"><strong>依時間找場次 →</strong><span>按日期、時間、版本比較所有影城的未開演場次。</span></a>
-  <a href="./cinemas.html"><strong>依影城查看 →</strong><span>瀏覽 12 間影城、各自的官方來源與場次。</span></a>
+  <a href="./cinemas.html"><strong>依影城查看 →</strong><span>瀏覽台北、新北 38 間影城的資訊與場次。</span></a>
   <a href="./map.html"><strong>地圖找影城 →</strong><span>依區域找到附近的影城，查看地點與進一步的場次。</span></a>
 </div>
 
@@ -103,10 +103,10 @@
             <div class="results-controls"><label class="sort-control" id="sort-control">排序<select id="sort-order" aria-describedby="sort-note"><option value="time">時間（最近開演）</option><option value="movie">電影（各版本分開）</option><option value="version">版本（各電影分開）</option></select></label><span id="result-count" class="result-count" aria-live="polite"></span></div>
           </div>
           <p class="sort-note" id="sort-note">同義版本合併選擇與計數，例如「數位(英)」與「數位‧英文版」統一為「數位（英語）」。不同語言、3D、特殊影廳及活動場保留區分；各場次仍顯示官方原始版本。</p>
-          <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="sync-time" role="status" aria-live="polite">讀取已發布的來源快照…</span><button type="button" class="refresh-button" id="refresh-catalog" aria-describedby="refresh-note">↻ 重新載入已發布場次</button><button type="button" class="refresh-button" id="toggle-demo-preview" aria-pressed="false">查看虛構測試資料</button></div>
+          <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="sync-time" role="status" aria-live="polite">讀取已發布的來源快照…</span><button type="button" class="refresh-button" id="refresh-catalog" aria-describedby="refresh-note">↻ 重新載入已發布場次</button></div>
           <div class="refresh-help hidden" id="refresh-help"><p>無法讀取已發布的場次快照。請確認網路後再試；目前顯示的資料會保留。</p></div>
           <p class="sr-only" id="refresh-note">重新載入 GitHub Pages 已發布的來源快照，保留目前篩選；資料由站點排程更新，不會從瀏覽器直接抓取影城。</p>
-          <div id="source-health" class="filter-foot" style="white-space:pre-line;margin:0 0 16px"></div><label class="field" id="extra-date-field" style="margin:0 0 16px"><span id="date-scope-note">其他日期（含預售場次）</span><input id="date-picker" type="date"></label><div id="screening-view" class="screening-list"></div>
+          <details id="source-details" class="developer-details"><summary>進階來源資訊（唯讀）</summary><div id="source-health" class="filter-foot" aria-label="影城同步來源明細"></div></details><label class="field" id="extra-date-field" style="margin:0 0 16px"><span id="date-scope-note">其他日期（含預售場次）</span><input id="date-picker" type="date"></label><div id="screening-view" class="screening-list"></div>
           <div id="cinema-view" class="venue-list hidden"></div>
           <div id="map-layout" class="map-layout hidden">
             <div class="map-destination"><span class="venue-kicker">GOOGLE MAPS · 地點導覽</span><h3 id="map-selected-name"></h3><p id="map-selected-address"></p><p id="map-cinema-status" class="map-status-note" aria-live="polite"></p><iframe id="theatre-map" class="theatre-map" title="Google Maps 影城位置" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe><span class="map-hint">可直接在此拖曳、縮放與查看位置；選擇其他影城會切換地圖。地圖由 Google 提供。</span><a id="map-launch" class="map-open" target="_blank" rel="noopener noreferrer">地圖無法載入？在 Google Maps 查看 ↗</a><a id="map-showtimes" class="map-route-link" href="./showtimes.html">查看這間影城場次 →</a></div>
@@ -161,7 +161,7 @@
 
     <footer>
       <p>Movie Checker · 個人非商業 POC · 台北電影場次查詢介面</p>
-      <p>本站為個人非商業 POC。已載入來源快照時，場次仍可能更新或取消；請至原始影城場次頁核對。虛構測試資料另行標示。</p>
+      <p>本站為個人非商業 POC。已載入來源快照時，場次仍可能更新或取消；請至原始影城場次頁核對。最終場次及售票資訊請以影城公告為準。</p>
     </footer>
   </div>
 
