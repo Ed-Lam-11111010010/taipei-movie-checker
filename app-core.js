@@ -25,7 +25,13 @@
     const originalDemoBanner = document.querySelector('.demo-banner div').innerHTML;
     const originalDemoDescription = document.querySelector('.demo-section-title p').textContent;
     const originalFooterDescription = document.querySelector('footer p:last-child').textContent;
-    let cinemas = catalogue.cinemas.map(function(c) { return {...c, official:c.officialUrl, schedules:c.showtimesUrl}; });
+    const additionalTheaters=Array.isArray(window.MOVIE_CHECKER_ADDITIONAL_THEATERS)?window.MOVIE_CHECKER_ADDITIONAL_THEATERS.filter(x=>x?.directoryOnly===true):[];
+    function hydrateCinemas(rows) {
+      const connected=rows.map(c=>({...c,official:c.officialUrl,schedules:c.showtimesUrl,directoryOnly:false}));
+      const known=new Set(connected.map(c=>c.id));
+      return [...connected,...additionalTheaters.filter(c=>!known.has(c.id)).map(c=>({...c,official:c.officialUrl,schedules:c.showtimesUrl}))];
+    }
+    let cinemas=hydrateCinemas(catalogue.cinemas);
     let showings = catalogue.screenings;
     let formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
     let selectedMovieKeys = [];
@@ -81,7 +87,14 @@
       $('#map-selected-name').textContent = cinema.name;
       $('#map-selected-address').textContent = cinema.address;
       const localSessions = document.getElementById('map-showtimes');
-      if (localSessions) localSessions.href = './showtimes.html?cinema=' + encodeURIComponent(cinema.id);
+      if (localSessions) {
+        localSessions.href=cinema.directoryOnly ? (cinema.schedules||cinema.official||mapsSearch(cinema)) : './showtimes.html?cinema='+encodeURIComponent(cinema.id);
+        localSessions.textContent=cinema.directoryOnly?'場次尚未串接・前往來源網站 ↗':'查看這間影城場次 →';
+        localSessions.target=cinema.directoryOnly?'_blank':'_self';
+        localSessions.rel=cinema.directoryOnly?'noopener noreferrer':'';
+      }
+      const cinemaStatus=$('#map-cinema-status');
+      if(cinemaStatus)cinemaStatus.textContent=cinema.directoryOnly?'僅收錄影城資料，尚未接入本站自動場次。':'已接入本站電影場次快照（非即時訂位）。';
       $('#map-launch').href = mapsSearch(cinema);
       const frame = $('#theatre-map');
       if (selectedView === 'map' && frame.dataset.cinemaId !== cinema.id) {
@@ -253,18 +266,35 @@
       list.classList.toggle('hidden', selectedView !== 'screenings');
     }
     function renderCinemas(filters) {
-      const list = $('#cinema-view');
-      const items = filteredCinemas(filters);
-      list.innerHTML = items.map((cinema) => {
-        const count = filteredShowings(filters).filter((showing) => showing.cinemaId === cinema.id).length;
-        return `<article class="venue-card"><span class="venue-kicker">${esc(cinema.chain)} · ${esc(cinema.district)}</span><h3>${esc(cinema.name)}</h3><p>${esc(cinema.address)}<br>${filters.movieKeys.length ? '所有日期' : '選定日期'}取得 ${count} 個場次；詳見來源狀態。</p><div class="venue-actions"><a class="map-link" href="${mapsSearch(cinema)}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a><a href="${esc(cinema.official)}" target="_blank" rel="noopener noreferrer">影城資訊 ↗</a><a href="./showtimes.html?cinema=${encodeURIComponent(cinema.id)}">本站場次 →</a><a href="${esc(cinema.schedules)}" target="_blank" rel="noopener noreferrer">外部場次 ↗</a></div></article>`;
+      const list=$('#cinema-view');
+      const items=filteredCinemas(filters).sort((a,b)=>
+        Number(!a.address.startsWith('台北市'))-Number(!b.address.startsWith('台北市'))||
+        a.district.localeCompare(b.district,'zh-TW')||a.name.localeCompare(b.name,'zh-TW'));
+      const countByVenue=new Map();
+      filteredShowings(filters).forEach(row=>countByVenue.set(row.cinemaId,(countByVenue.get(row.cinemaId)||0)+1));
+      list.innerHTML=items.map(cinema=>{
+        const synced=!cinema.directoryOnly;
+        const count=countByVenue.get(cinema.id)||0;
+        const official=cinema.official?.startsWith('https://')?
+          '<a href="'+esc(cinema.official)+'" target="_blank" rel="noopener noreferrer">影城網站 ↗</a>':'';
+        const schedule=cinema.schedules?.startsWith('https://')?
+          '<a href="'+esc(cinema.schedules)+'" target="_blank" rel="noopener noreferrer">'+(synced?'來源場次 ↗':'外部資訊 ↗')+'</a>':'';
+        const local=synced?'<a href="./showtimes.html?cinema='+encodeURIComponent(cinema.id)+'">本站場次 →</a>':'';
+        return '<article class="venue-card" data-coverage="'+(synced?'synced':'directory')+'">'+
+          '<span class="venue-kicker">'+(cinema.address.startsWith('台北市')?'台北市':'新北市')+' · '+esc(cinema.chain)+' · '+esc(cinema.district)+'</span>'+
+          '<h3>'+esc(cinema.name)+'</h3>'+
+          '<span class="venue-coverage '+(synced?'venue-covered':'venue-unconnected')+'">'+
+          (synced?'已接入場次來源':'已收錄影城・尚未串接場次')+'</span>'+
+          '<p>'+esc(cinema.address)+'<br>'+(synced?('選定日期有 '+count+' 筆已取得場次；沒有資料不代表停映。'):'目前不提供自動場次；請前往來源網站核對。')+'</p>'+
+          '<div class="venue-actions"><a class="map-link" href="'+mapsSearch(cinema)+'" target="_blank" rel="noopener noreferrer">Google Maps ↗</a>'+
+          official+local+schedule+'</div></article>';
       }).join('');
-      list.classList.toggle('hidden', selectedView !== 'cinemas');
+      list.classList.toggle('hidden',selectedView!=='cinemas');
     }
     function renderMap(filters) {
       const items = filteredCinemas(filters);
       const list = $('#map-place-list');
-      list.innerHTML = items.map((cinema) => `<button class="map-place" type="button" data-cinema-id="${esc(cinema.id)}" aria-current="${cinema.id === selectedMapCinema}"><strong>${esc(cinema.name)}</strong><span>${esc(cinema.address)}</span></button>`).join('');
+      list.innerHTML = items.map((cinema) => `<button class="map-place" type="button" data-cinema-id="${esc(cinema.id)}" aria-current="${cinema.id === selectedMapCinema}"><strong>${esc(cinema.name)}</strong><span>${esc(cinema.address)}</span><small>${cinema.directoryOnly?'尚未接入場次':'場次已接入'}</small></button>`).join('');
       list.querySelectorAll('.map-place').forEach((button) => button.addEventListener('click', () => {
         const cinema = cinemas.find((item) => item.id === button.dataset.cinemaId);
         setMap(cinema);
@@ -294,18 +324,30 @@
         $('#result-count').textContent = `${movieVersionCounts(items).size} 部電影版本 · ${items.length} 個場次`;
         const sortLabel = {time:'依時間排序',movie:'依電影・各版本分開',version:'依版本・各電影分開'}[sortSelect.value];
         $('#selected-date').textContent = `${allMovieDates ? '已選電影・所有日期' : dateLabel(selectedDate, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })} · 台北時間・${sortLabel}・隱藏已開演`;
-        $('#empty-state').classList.toggle('hidden', items.length > 0);
+        const empty=$('#empty-state');
+        const chosen=cinemas.find(c=>c.id===filters.cinema);
+        if(chosen?.directoryOnly){
+          empty.textContent='這間影城目前只列入名錄，尚未串接本站場次。請前往外部影城網站核對。 ';
+          const url=chosen.schedules||chosen.official;
+          if(url?.startsWith('https://')){
+            const a=document.createElement('a');
+            a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='查看外部資料 ↗';
+            empty.append(a);
+          }
+        } else empty.textContent='目前沒有符合條件的未開演場次。未取得不代表沒有放映，請調整日期或核對來源。';
+        empty.classList.toggle('hidden', items.length > 0);
       } else if (selectedView === 'cinemas') {
         const items = filteredCinemas(filters);
         $('#results-title').textContent = '追蹤影城';
         $('#result-count').textContent = `${items.length} 間影城`;
-        $('#selected-date').textContent = '影城地址與場次來源入口。';
+        const cityCount=items.filter(c=>c.address.startsWith('台北市')).length;
+        $('#selected-date').textContent = `台北市 ${cityCount} 間／新北市 ${items.length-cityCount} 間；其中 ${items.filter(c=>!c.directoryOnly).length} 間有場次同步，其餘僅提供影城資訊。`;
         $('#empty-state').classList.toggle('hidden', items.length > 0);
       } else {
         const items = filteredCinemas(filters);
         $('#results-title').textContent = '影城地圖';
         $('#result-count').textContent = `${items.length} 個地點`;
-        $('#selected-date').textContent = '地圖由 Google Maps 提供；選擇影城可在此查看位置。';
+        $('#selected-date').textContent = '台北市及新北市影城地圖；標示於地圖不代表本站已取得該影城場次。';
         $('#empty-state').classList.toggle('hidden', items.length > 0);
       }
       document.querySelectorAll('[data-view]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.view === selectedView)));
@@ -416,7 +458,7 @@
         demoPreviewActive = false;
         catalogue = validDemo ? rollingDemoCatalog(next) : next;
         latestPublicCatalog = catalogue;
-        cinemas = catalogue.cinemas.map(c => ({...c, official: c.officialUrl, schedules: c.showtimesUrl}));
+        cinemas = hydrateCinemas(catalogue.cinemas);
         showings = catalogue.screenings;
         formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
         const today = taipeiDateKey();
@@ -520,7 +562,7 @@
     function usePersonalShowings(rows) {
       personalImportActive = true;
       catalogue = { ...publicDemoCatalog, checkedAt: null, screenings: rows };
-      cinemas = publicDemoCatalog.cinemas.map(c => ({ ...c, official: c.officialUrl, schedules: c.showtimesUrl }));
+      cinemas = hydrateCinemas(publicDemoCatalog.cinemas);
       showings = rows;
       formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
       selectedMovieKeys = [];
@@ -563,7 +605,7 @@
       personalImportActive = false;
       demoPreviewActive = false;
       catalogue = latestPublicCatalog;
-      cinemas = catalogue.cinemas.map(c => ({ ...c, official: c.officialUrl, schedules: c.showtimesUrl }));
+      cinemas = hydrateCinemas(catalogue.cinemas);
       showings = catalogue.screenings;
       formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
       selectedMovieKeys = [];
@@ -586,7 +628,7 @@
       if (personalImportActive) return;
       demoPreviewActive = !demoPreviewActive;
       catalogue = demoPreviewActive ? rollingDemoCatalog(publicDemoCatalog) : latestPublicCatalog;
-      cinemas = catalogue.cinemas.map(c => ({...c, official:c.officialUrl, schedules:c.showtimesUrl}));
+      cinemas = hydrateCinemas(catalogue.cinemas);
       showings = catalogue.screenings;
       formats = [...new Set(showings.map(s => normalizeMovieFormat(s.format)))].sort();
       selectedMovieKeys = [];
