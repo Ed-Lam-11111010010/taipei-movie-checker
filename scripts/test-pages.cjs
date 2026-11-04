@@ -102,6 +102,22 @@ async function test() {
     console.log('PASS Showtimes:',dates[0],document.querySelectorAll('#screening-view .screening-card').length,'session cards');
   } finally { showtimes.window.close(); }
 
+  // A municipal timetable may contain linked film titles in its source cells.
+  // Browser-facing movie labels must display the visible title only.
+  const fuzhongRow=catalog.screenings.find(row=>row.cinemaId==='fuzhong15');
+  if (fuzhongRow) {
+    const official=await loadPage('showtimes.html?cinema=fuzhong15');
+    try {
+      const {document,Event}=official.window;
+      const picker=document.getElementById('date-picker');
+      picker.value=fuzhongRow.date; picker.dispatchEvent(new Event('change',{bubbles:true}));
+      const card=document.querySelector('#screening-view .screening-card');
+      assert.ok(card,'Official Fuzhong session shown');
+      assert.ok(!card.textContent.includes('/fuzhong15_chi/'),'No Markdown hyperlinks in public film titles');
+      console.log('PASS Official Fuzhong15: linked title renders as plain film name');
+    } finally { official.window.close(); }
+  }
+
   const cinemas=await loadPage('cinemas.html');
   try {
     const {document}=cinemas.window;
