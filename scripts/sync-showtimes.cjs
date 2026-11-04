@@ -187,7 +187,7 @@ function record(cinema, businessDate, title, format, time, sourceUrl, poster = n
   if (!/^\d{4}-\d{2}-\d{2}$/.test(businessDate) || businessDate < today ||
       businessDate > maximumDate || title.length < 2 || title.length > 120 ||
       format.length > 50 || !validTime.test(time)) return;
-  if (!/^https:\/\//.test(sourceUrl) || !['www.vscinemas.com.tw','www.ambassador.com.tw','www.atmovies.com.tw'].includes(new URL(sourceUrl).hostname)) return;
+  if (!/^https:\/\//.test(sourceUrl) || !['www.vscinemas.com.tw','www.ambassador.com.tw','www.atmovies.com.tw','www.culture.ntpc.gov.tw'].includes(new URL(sourceUrl).hostname)) return;
   // Cinema listings sometimes group after-midnight showings under the previous business day.
   const date = Number(time.slice(0, 2)) < 6 ? addDays(businessDate, 1) : businessDate;
   const key = [cinema.id, businessDate, title, format, time].join('|');
@@ -291,7 +291,46 @@ function parseAtmovies(md, cinema, date, url) {
   }
   if (matched < 1) throw new Error('No trustworthy atmovies rows');
 }
-async function get(url) {
+// 府中15 has an official municipal, month-scoped screening table instead of
+// ordinary per-movie schedules. Treat ticket/registration status as source data,
+// never as an available/guaranteed ticket.
+function parseFuzhong(html, cinema, url) {
+  if (cinema.id !== 'fuzhong15') throw new Error('Fuzhong cinema mismatch');
+  const md = textMd(html);
+  if (!md.includes('府中15') || !/放映場次表/.test(md)) throw new Error('Fuzhong official page identity mismatch');
+  const ym = /(20\d{2})年\s*(\d{1,2})月放映場次表/.exec(md);
+  if (!ym) throw new Error('Missing official Fuzhong monthly calendar');
+  const year = Number(ym[1]), month = Number(ym[2]);
+  if (year < 2025 || year > 2100 || month < 1 || month > 12) throw new Error('Invalid official schedule month');
+  let matched = 0;
+  const consume = cells => {
+    if (cells.length < 3) return;
+    const dateMatch = /^\s*(\d{1,2})\/(\d{1,2})\s*\([日一二三四五六]\)/.exec(cells[0]);
+    const timeMatch = /(?:^|[^\d])([01]\d|2[0-3]):([0-5]\d)(?!\d)/.exec(cells[1] || '');
+    if (!dateMatch || !timeMatch || Number(dateMatch[1]) !== month) return;
+    const date = year+'-'+pad(month)+'-'+pad(Number(dateMatch[2]));
+    const rawTitle = cells[2].replace(/\s+/g,' ').trim();
+    const status = /(?:^|\s)([售報索])$/.exec(rawTitle)?.[1] || '';
+    const title = rawTitle.replace(/\s+[售報索]$/, '').trim();
+    if (!title || title==='片名' || title.length>120) return;
+    const format = status === '售' ? '府中15電影放映（票券）' :
+      status === '報' ? '府中15電影放映（需報名）' :
+      status === '索' ? '府中15電影放映（索票）' : '府中15特別放映';
+    const before=output.length;
+    record(cinema,date,title,format,timeMatch[1]+':'+timeMatch[2],url);
+    if (output.length > before) matched++;
+  };
+  // Use the official table's native rows first; Turndown's default rules
+  // flatten HTML tables and otherwise lose the cell boundaries.
+  for(const row of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)){
+    const cells=[...row[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)]
+      .map(match=>textMd(match[1]).replace(/\s+/g,' ').trim());
+    consume(cells);
+  }
+  if (matched < 1) throw new Error('No safely parsed upcoming Fuzhong sessions');
+}
+
+async function get(url, rawHtml = false) {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 22000);
   try {
@@ -300,7 +339,7 @@ async function get(url) {
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const html = await response.text();
     if (html.length < 1000 || html.length > 8000000) throw new Error('Unexpected HTML length ' + html.length);
-    return textMd(html);
+    return rawHtml ? html : textMd(html);
   } finally { clearTimeout(timer); }
 }
 async function run() {
@@ -318,13 +357,21 @@ async function run() {
     let error = null, dates = [], before = output.length;
     const urls = [];
     if (newDirectory) {
-      // Use only published @movies cinema pages, at most two dates to limit source load.
-      // Do not infer that an empty date page means the theater has no movies.
-      for (let d=0;d<2;d++) {
-        const day=addDays(today,d);
+      if (cinema.id==='fuzhong15') {
+        urls.push([today,'https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260','fuzhong']);
+      } else {
         const atmoviesId=additionalAtmovies[cinema.id][0];
-        urls.push([day,'https://www.atmovies.com.tw/showtime/' + atmoviesId +
-          '/a02/' + day.replaceAll('-', '') + '/','atmovies']);
+        // A few independent theaters publish a valid latest-date timetable at
+        // the stable theater page, but not at the explicit YYYYMMDD URL.
+        if (['governor-taipei','broadway-gongguan','jingmei-jiajia','tiantai-sanchong'].includes(cinema.id)) {
+          urls.push([today,'https://www.atmovies.com.tw/showtime/'+atmoviesId+'/a02/','atmovies']);
+        }
+        // Read at most two days for newly connected cinema venues.
+        for (let d=0;d<2;d++) {
+          const day=addDays(today,d);
+          urls.push([day,'https://www.atmovies.com.tw/showtime/'+atmoviesId+
+            '/a02/'+day.replaceAll('-','')+'/','atmovies']);
+        }
       }
     } else if (cinema.id.startsWith('vieshow-')) {
       urls.push([today, cinema.officialUrl, 'vieshow']);
@@ -344,7 +391,8 @@ async function run() {
     for (const [day,url,kind] of urls) {
       if (kind === 'atmovies' && officialSucceeded) continue;
       try {
-        const markdown = await get(url);
+        const markdown = await get(url, kind==='fuzhong');
+        if (kind === 'fuzhong') parseFuzhong(markdown,cinema,url);
         if (kind === 'vieshow') { parseVieshow(markdown, cinema); officialSucceeded = true; }
         if (kind === 'ambassador') parseAmbassador(markdown, cinema, day, url);
         if (kind === 'atmovies') parseAtmovies(markdown, cinema, day, url);
@@ -430,6 +478,15 @@ function selftest() {
   }
   const directory=readAdditionalDirectory();
   if(directory.length!==26) throw Error('26-theater directory selftest failed');
+  // Municipal cinema pages list sessions in an HTML table with status and
+  // multiple film-program rows. Only use the dated table, not unrelated links.
+  const fuzhongFixture='<h1>府中15</h1><h2>'+today.slice(0,4)+'年'+Number(today.slice(5,7))+
+    '月放映場次表</h2><table><tr><th>日期</th><th>時間</th><th>片名</th></tr><tr>'+
+    '<td>'+Number(today.slice(5,7))+'/'+Number(today.slice(8))+'(三)</td>'+
+    '<td>19:00</td><td>不丹是幸福 售</td></tr></table>';
+  parseFuzhong(fuzhongFixture,{id:'fuzhong15'},'https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260');
+  if(!output.some(row=>row.cinemaId==='fuzhong15' && row.title==='不丹是幸福'))
+    throw Error('Official Fuzhong parser selftest failed');
   console.log('Parser and source-matched poster selftests passed');
 }
 
