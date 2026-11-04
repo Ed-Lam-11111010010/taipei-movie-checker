@@ -50,6 +50,136 @@ const atmoviesFallback = {
   'vieshow-linkou': ['t02e12', '林口三井OUTLET威秀影城'],
   'showtime-xinxin': ['t02d03', '欣欣秀泰影城']
 };
+// @movies publishes theater-specific screening URLs for these 26 directory additions.
+// Mapping is an allowlist: validate the named venue and exact date before accepting rows.
+// A theater is promoted into catalog.cinemas ONLY after a successful source parse.
+const additionalAtmovies = {
+  "showtime-dome": [
+    "t02a13",
+    "大巨蛋秀泰影城"
+  ],
+  "eslite-cinema": [
+    "t02a08",
+    "誠品電影院"
+  ],
+  "luxcinema-ximen": [
+    "t02b03",
+    "樂聲影城"
+  ],
+  "wonderful-cinema": [
+    "t02b07",
+    "真善美戲院"
+  ],
+  "centuryasia-ximen": [
+    "t02b06",
+    "喜樂時代影城西門今日店"
+  ],
+  "skcinema-ximen": [
+    "t02b05",
+    "台北新光影城"
+  ],
+  "miramar-dazhi": [
+    "t02d05",
+    "美麗華大直"
+  ],
+  "miranew-dazhi": [
+    "t02d06",
+    "美麗新大直皇家影城"
+  ],
+  "spot-taipei": [
+    "t02d20",
+    "光點台北電影院"
+  ],
+  "spot-huashan": [
+    "t02b16",
+    "光點華山電影館"
+  ],
+  "governor-taipei": [
+    "t02a05",
+    "總督影城"
+  ],
+  "breeze-taipei": [
+    "t02a03",
+    "微風影城"
+  ],
+  "centuryasia-nangang": [
+    "t02a09",
+    "喜樂時代影城"
+  ],
+  "halar-neihu": [
+    "t02a06",
+    "哈拉影城"
+  ],
+  "skcinema-tianmu": [
+    "t02d04",
+    "台北天母新光影城"
+  ],
+  "broadway-gongguan": [
+    "t02c01",
+    "百老匯影城公館店"
+  ],
+  "jingmei-jiajia": [
+    "t02f05",
+    "景美佳佳戲院"
+  ],
+  "tiantai-sanchong": [
+    "t02e04",
+    "三重天台戲院"
+  ],
+  "centuryasia-yonghe": [
+    "t02e17",
+    "永和喜樂時代影城"
+  ],
+  "showtime-tucheng": [
+    "t02e15",
+    "土城秀泰影城"
+  ],
+  "fuzhong15": [
+    "t02e08",
+    "府中15"
+  ],
+  "ambassador-xinzhuang": [
+    "t02e11",
+    "國賓新莊晶冠廣場影城"
+  ],
+  "machi-xinzhuang": [
+    "t02e03",
+    "新莊鴻金寶麻吉影城"
+  ],
+  "ambassador-linkou": [
+    "t02e10",
+    "國賓林口昕境廣場"
+  ],
+  "ambassador-tamsui": [
+    "t02e18",
+    "國賓影城淡水禮萊廣場"
+  ],
+  "showtime-shulin": [
+    "t02e13",
+    "樹林秀泰影城"
+  ]
+};
+const primaryCinemaIds = new Set([...Object.keys(atmoviesFallback), 'ambassador-main', 'ambassador-changchun']);
+function readAdditionalDirectory() {
+  const code = fs.readFileSync('theater-directory.js','utf8');
+  const match = /window\.MOVIE_CHECKER_ADDITIONAL_THEATERS\s*=\s*(\[[\s\S]*?\]);\s*$/.exec(code);
+  if (!match) throw new Error('Additional theater directory format mismatch');
+  const theaters = JSON.parse(match[1]);
+  if (!Array.isArray(theaters) || theaters.length !== 26) throw new Error('Expected 26 directory cinemas');
+  const names = new Set();
+  for (const theater of theaters) {
+    if (!theater.directoryOnly || names.has(theater.id) || !additionalAtmovies[theater.id] ||
+        !theater.id || !theater.name || !theater.address ||
+        !(theater.officialUrl === null || /^https:\/\//.test(theater.officialUrl)) ||
+        !/^https:\/\//.test(theater.showtimesUrl)) {
+      throw new Error('Untrusted additional theater record: ' + (theater?.id||'unknown'));
+    }
+    names.add(theater.id);
+  }
+  if (Object.keys(additionalAtmovies).length !== theaters.length) throw new Error('Mapping does not cover directory');
+  return theaters;
+}
+
 function textMd(html) { return converter.turndown(html).replace(/\r/g, ''); }
 function record(cinema, businessDate, title, format, time, sourceUrl, poster = null) {
   title = String(title || '').replace(/\s+/g, ' ').trim();
@@ -129,7 +259,7 @@ function parseAmbassador(md, cinema, date, url) {
   if (matched < 1) throw new Error('No Ambassador showtimes');
 }
 function parseAtmovies(md, cinema, date, url) {
-  const expected = atmoviesFallback[cinema.id];
+  const expected = atmoviesFallback[cinema.id] || additionalAtmovies[cinema.id];
   if (!expected || !md.includes(expected[1])) throw new Error('atmovies cinema identity does not match');
   const marker = '### ' + date.replaceAll('-', '/');
   const start = md.indexOf(marker);
@@ -175,12 +305,28 @@ async function get(url) {
 }
 async function run() {
   const previous = JSON.parse(fs.readFileSync('catalog.json','utf8'));
-  if (!Array.isArray(previous.cinemas) || previous.cinemas.length !== 12) throw new Error('Cinema catalog mismatch');
+  if (!Array.isArray(previous.cinemas)) throw new Error('Cinema catalog missing');
+  const original = previous.cinemas.filter(c => primaryCinemaIds.has(c.id));
+  if (original.length !== 12 || new Set(original.map(c=>c.id)).size !== 12)
+    throw new Error('Original 12 cinema adapters missing or duplicated');
+  const additional = readAdditionalDirectory();
+  const allCinemas = original.concat(additional);
+  const syncedAdditional = [];
   const sources = [];
-  for (const cinema of previous.cinemas) {
+  for (const cinema of allCinemas) {
+    const newDirectory = !primaryCinemaIds.has(cinema.id);
     let error = null, dates = [], before = output.length;
     const urls = [];
-    if (cinema.id.startsWith('vieshow-')) {
+    if (newDirectory) {
+      // Use only published @movies cinema pages, at most two dates to limit source load.
+      // Do not infer that an empty date page means the theater has no movies.
+      for (let d=0;d<2;d++) {
+        const day=addDays(today,d);
+        const atmoviesId=additionalAtmovies[cinema.id][0];
+        urls.push([day,'https://www.atmovies.com.tw/showtime/' + atmoviesId +
+          '/a02/' + day.replaceAll('-', '') + '/','atmovies']);
+      }
+    } else if (cinema.id.startsWith('vieshow-')) {
       urls.push([today, cinema.officialUrl, 'vieshow']);
       for (let d = 0; d < 3; d++) {
         const day = addDays(today, d);
@@ -207,6 +353,17 @@ async function run() {
     const rows = output.slice(before);
     dates = [...new Set(rows.map(r=>r.sourceBusinessDate))].sort();
     const success = rows.length > 0;
+    if (success && newDirectory) {
+      // Remove the directory-only flag; all movie links will now use verified rows.
+      const {directoryOnly, coverage, referenceUrl, region, ...fields} = cinema;
+      const promoted = { ...fields, showtimesUrl: rows[0].sourceUrl };
+      // Ticket portals are generic entry points, never a fabricated session link.
+      if (cinema.id.startsWith('ambassador-'))
+        promoted.ticketPortalUrl = 'https://booking.ambassador.com.tw/';
+      if (cinema.id.startsWith('showtime-'))
+        promoted.ticketPortalUrl = 'https://www.showtimes.com.tw/';
+      syncedAdditional.push(promoted);
+    }
     const usedFallback = success && cinema.id.startsWith('vieshow-') && !officialSucceeded;
     sources.push({ cinemaId: cinema.id, sourceUrl: success ? rows[0].sourceUrl : cinema.showtimesUrl,
       state: success ? (error ? 'partial' : 'ok') : 'error',
@@ -222,10 +379,12 @@ async function run() {
   if (output.length > 15000) throw new Error('Too many screenings: ' + output.length);
   output.sort((a,b) => a.startsAt.localeCompare(b.startsAt) || a.title.localeCompare(b.title));
   const catalog = { schemaVersion: 1, mode: 'source-snapshot', checkedAt,
-    refreshIntervalMinutes: 360, cinemas: previous.cinemas, screenings: output,
-    sources, adapterVersion: 'github-actions-source-parser-v2-posters' };
+    refreshIntervalMinutes: 360, cinemas: original.concat(syncedAdditional), screenings: output,
+    sources, adapterVersion: 'github-actions-source-parser-v3-expanded-theaters' };
   fs.writeFileSync('catalog.json', JSON.stringify(catalog) + '\n');
-  console.log('Published snapshot: ' + output.length + ' entries, ' + sources.filter(s => s.lastSuccessAt).length + '/12 venues, ' + checkedAt);
+  console.log('Published snapshot: ' + output.length + ' entries, ' +
+    sources.filter(s=>s.lastSuccessAt).length + '/' + allCinemas.length +
+    ' venues; ' + syncedAdditional.length + '/26 added cinemas successfully parsed, ' + checkedAt);
 }
 function selftest() {
   const fake = { id:'vieshow-xinyi',name:'台北信義威秀影城',officialUrl:'https://www.vscinemas.com.tw/theater/detail.aspx?id=1' };
@@ -254,6 +413,23 @@ function selftest() {
   const amb = output.find(row => row.cinemaId === venue.id && row.title === '泥面人');
   if (!amb || amb.posterUrl !== jpg || !amb.posterSourceUrl.includes(mid)) throw new Error('Ambassador poster selftest failed');
   if (Object.keys(trustedPoster({url:'https://www.atmovies.com.tw/photo101/a/pl_b.jpg',source:'https://www.atmovies.com.tw/movie/a/'})).length) throw new Error('Poster mismatch must be rejected');
+  const extraCinema={id:'miramar-dazhi',name:'美麗華大直'};
+  const extraSource='https://www.atmovies.com.tw/showtime/t02d05/a02/'+today.replaceAll('-','')+'/';
+  const extraFixture=['## 美麗華大直', '### '+formatDate+' (三)',
+    '* [泥面人](/movie/'+filmId+'/)',
+    '* * [![](/photo101/'+filmId+'/pl_'+filmId+'.jpg)](http://app2.atmovies.com.tw/poster/'+filmId+'/)',
+    '* 19：30'].join('\n');
+  parseAtmovies(extraFixture,extraCinema,today,extraSource);
+  const miramar=output.find(row=>row.cinemaId==='miramar-dazhi');
+  if(!miramar || miramar.sourceUrl !== extraSource || !miramar.posterUrl) throw Error('Expanded cinema parser selftest failed');
+  try {
+    parseAtmovies(extraFixture,{id:'showtime-shulin'},today,extraSource);
+    throw new Error('Must reject cross-cinema identity');
+  } catch(error) {
+    if (!/identity does not match/.test(error.message)) throw error;
+  }
+  const directory=readAdditionalDirectory();
+  if(directory.length!==26) throw Error('26-theater directory selftest failed');
   console.log('Parser and source-matched poster selftests passed');
 }
 
