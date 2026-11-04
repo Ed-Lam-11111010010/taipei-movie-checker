@@ -12,6 +12,8 @@ on:
       - "demo-catalog.js"
       - "movie-pages.css"
       - "movie-pages.js"
+      - "theater-directory.js"
+      - "catalog.json"
       - "scripts/test-pages.cjs"
       - ".github/workflows/test-pages.yml"
 
