@@ -24,20 +24,38 @@
     try {
       const url = new URL(value);
       if (url.protocol !== 'https:' || url.port || url.username || url.password) return null;
-      if (!['www.vscinemas.com.tw','www.ambassador.com.tw','www.showtimes.com.tw','www.atmovies.com.tw','kinotw.com'].includes(url.hostname)) return null;
+      if (!['www.vscinemas.com.tw','www.ambassador.com.tw','www.showtimes.com.tw','www.atmovies.com.tw','kinotw.com','www.culture.ntpc.gov.tw'].includes(url.hostname)) return null;
       return url.href;
     } catch { return null; }
   }
+  function verifiedEzdingLink(value) {
+    try {
+      const u = new URL(value);
+      return u.protocol === 'https:' && u.hostname === 'www.ezding.com.tw' &&
+        u.pathname === '/cinemabooking' && !u.username && !u.password &&
+        !u.port && !u.hash && /^[a-f0-9]{32}$/i.test(u.searchParams.get('cinemaid') || '') ? u.href : null;
+    } catch { return null; }
+  }
   function ticketFor(row,cinema) {
-    if (!sourceMode() || row.isDemo) return null;
-    const direct = officialBookingPage(row);
-    if (direct) return {url:direct,direct:true};
-    if (cinema.id.startsWith('vieshow-') && cinema.ticketPortalUrl===PORTALS.vieshow) return {url:PORTALS.vieshow,direct:false};
-    if (cinema.id.startsWith('ambassador-') && cinema.ticketPortalUrl===PORTALS.ambassador) return {url:PORTALS.ambassador,direct:false};
-    if (cinema.id==='showtime-xinxin' && cinema.ticketPortalUrl===PORTALS.showtime) return {url:PORTALS.showtime,direct:false};
-    if (cinema.id.startsWith('showtime-') && cinema.ticketPortalUrl===PORTALS.showtimeRoot)
-      return {url:PORTALS.showtimeRoot,direct:false};
-    return null;
+    if (!sourceMode() || row.isDemo || !cinema) return null;
+    if (cinema.id === 'fuzhong15') {
+      const url=sourceLink(row.sourceUrl) || sourceLink(cinema.showtimesUrl);
+      return url ? {url,direct:false,infoOnly:true,label:'查詢報名／索票資訊 ↗'} : null;
+    }
+    const direct=officialBookingPage(row);
+    if(direct) return {url:direct,direct:true,label:'直接前往官方訂票 ↗'};
+    if(cinema.id.startsWith('vieshow-') && cinema.ticketPortalUrl===PORTALS.vieshow)
+      return {url:PORTALS.vieshow,direct:false,label:'前往官方訂票 ↗'};
+    if(cinema.id.startsWith('ambassador-') && cinema.ticketPortalUrl===PORTALS.ambassador)
+      return {url:PORTALS.ambassador,direct:false,label:'前往官方訂票 ↗'};
+    if(cinema.id==='showtime-xinxin' && cinema.ticketPortalUrl===PORTALS.showtime)
+      return {url:PORTALS.showtime,direct:false,label:'前往官方訂票 ↗'};
+    const portal=verifiedEzdingLink(cinema.ticketPortalUrl);
+    if(portal) return {url:portal,direct:false,label:'前往網路訂票 ↗'};
+    if(cinema.id.startsWith('showtime-') && cinema.ticketPortalUrl===PORTALS.showtimeRoot)
+      return {url:PORTALS.showtimeRoot,direct:false,infoOnly:true,label:'查看官方購票資訊 ↗'};
+    const url=sourceLink(cinema.showtimesUrl) || sourceLink(row.sourceUrl);
+    return url ? {url,direct:false,infoOnly:true,label:'查看場次／購票資訊 ↗'} : null;
   }
   function priceFor(row, cinema) {
     if (!sourceMode() || row.isDemo) return {value:'未驗證票價', note:'僅供資料預覽'};
@@ -90,8 +108,8 @@
       '<div class="film-session-actions">'+
       (source?'<a href="'+esc(source)+'" target="_blank" rel="noopener noreferrer">核對來源 ↗</a>':'')+
       (ticket?'<a class="film-ticket" href="'+esc(ticket.url)+'" target="_blank" rel="noopener noreferrer" title="'+
-        esc(ticket.direct?'來源提供已驗證場次連結':'需在影城平台重新選擇電影、日期和時間')+'">'+
-        (ticket.direct?'直接前往官方訂票 ↗':'前往官方訂票 ↗')+'</a>':'<span>沒有可驗證的訂票入口</span>')+
+        esc(ticket.direct?'來源提供已驗證場次連結':ticket.infoOnly?'請在來源頁核對場次或購票方式，不保證線上售票':'需在訂票平台重新選擇電影、日期和時間')+'">'+
+        esc(ticket.label)+'</a>':'<span>請至影城查詢購票方式</span>')+
       '</div></div>';
   }
   function venueSection(cinema, rows) {
@@ -147,7 +165,7 @@
       esc(sourceMode()?'已發布場次快照':personalImportActive?'個人匯入 · 未經核對':'虛構測試資料')+
       '</p><h3>'+esc(chosen.title)+'</h3><p>'+chosen.cinemaIds.size+' 間影城 · '+chosen.rows.length+
       ' 個未開演場次 · '+dates.length+' 個日期</p>'+
-      '<p>'+(sourceMode()?'請先選上映日期，再比較影城與放映時間。前往影城官方售票入口後，通常需再次選擇相同場次。':'目前為個人匯入或虛構測試資料，沒有經過官方場次核對，因此不提供訂票按鈕。')+'</p></div></div>'+
+      '<p>'+(sourceMode()?'請先選上映日期，再比較影城與放映時間。訂票連結可能導向第三方購票平台或場次資訊頁，請重新核對購票方式。':'目前為個人匯入或虛構測試資料，沒有經過官方場次核對，因此不提供訂票按鈕。')+'</p></div></div>'+
       buttons+'<div class="film-detail-filters"><span>'+shown.length+' 個顯示場次</span>'+options+'</div>'+
       (theatres||'<p class="film-empty">此篩選下暫無場次，請選擇其他日期或影城。</p>');
     detail.querySelectorAll('[data-film-date]').forEach(button=>button.addEventListener('click',()=>{
