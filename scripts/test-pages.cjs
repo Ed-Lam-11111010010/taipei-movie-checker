@@ -124,7 +124,7 @@ async function test() {
 
   // A municipal timetable may contain linked film titles in its source cells.
   // Browser-facing movie labels must display the visible title only.
-  const fuzhongRow=catalog.screenings.find(row=>row.cinemaId==='fuzhong15');
+  const fuzhongRow=catalog.screenings.find(row=>row.cinemaId==='fuzhong15' && Date.parse(row.startsAt)>clock);
   if (fuzhongRow) {
     const official=await loadPage('showtimes.html?cinema=fuzhong15');
     try {
