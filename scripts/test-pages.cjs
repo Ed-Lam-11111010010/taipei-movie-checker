@@ -76,6 +76,17 @@ async function test() {
     const films=document.querySelectorAll('#film-grid .film-tile');
     assert.ok(films.length > 10, 'movies should list source-backed titles');
     const title = films[0].querySelector('.film-tile-title').textContent.trim();
+    const yonghe=movies.window.MOVIE_CHECKER_ADDITIONAL_THEATERS.find(c=>c.id==='centuryasia-yonghe');
+    assert.ok(yonghe,'Yonghe theater is in directory');
+    const ticket=movies.window.movieBookingFor({cinemaId:yonghe.id,isDemo:false},yonghe);
+    assert.equal(ticket.url,'https://www.ezding.com.tw/cinemabooking?campaign_code=atmovie_cinemapage&channel=atmovie&cinemaid=c072c5c43fc011e9a245782bcb259cad','Yonghe uses the theater-specific ez訂 booking URL');
+    assert.match(ticket.label,/網路訂票/);
+    const unknown=movies.window.movieBookingFor({cinemaId:'no-verified-portal',isDemo:false},
+      {id:'no-verified-portal',showtimesUrl:'https://www.atmovies.com.tw/showtime/t02a13/a02/'});
+    assert.equal(unknown.infoOnly,true,'unverified cinema must not claim a working booking portal');
+    assert.match(unknown.label,/購票資訊/);
+    assert.equal(movies.window.movieBookingFor({cinemaId:yonghe.id,isDemo:true},yonghe),null,
+      'test data must never expose booking buttons');
     assert.ok(document.querySelector('#movie-explorer'));
     const route = '#movie=' + encodeURIComponent(title);
     movies.window.location.hash = route;
