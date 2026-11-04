@@ -290,7 +290,7 @@ window.MOVIE_CHECKER_ADDITIONAL_THEATERS = [
     "district": "新北市板橋區",
     "address": "新北市板橋區府中路15號",
     "officialUrl": "https://www.fuzhong15.ntpc.gov.tw/",
-    "showtimesUrl": "https://www.fuzhong15.ntpc.gov.tw/",
+    "showtimesUrl": "https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260",
     "referenceUrl": "https://www.moovietime.com/cinemas/independent-fuzhong15",
     "region": "新北市",
     "coverage": "directory-only",
