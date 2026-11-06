@@ -97,7 +97,7 @@
     return '<article class="film-tile">'+posterHtml(group.poster)+
       '<div class="film-tile-info"><a class="film-tile-title" href="'+esc(route)+'">'+esc(group.title)+'</a>'+
       '<span class="film-tile-meta">'+group.cinemaIds.size+' 間影城 · '+group.rows.length+' 場</span>'+
-      '<a class="film-tile-cta" href="'+esc(route)+'">查看上映日期、票價與訂票 →</a></div></article>';
+      '<a class="film-tile-cta" href="'+esc(route)+'">查看場次與購票 →</a></div></article>';
   }
   function screening(row,cinema) {
     const price=priceFor(row,cinema), ticket=ticketFor(row,cinema), source=sourceLink(row.sourceUrl);
