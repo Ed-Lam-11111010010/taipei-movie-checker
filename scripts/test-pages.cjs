@@ -150,6 +150,8 @@ async function test() {
   try {
     const {document}=cinemas.window;
     assert.equal(document.body.dataset.page,'cinemas');
+    assert.equal(cinemas.window.getComputedStyle(document.querySelector('.format-field')).display,'none','irrelevant cinema format filter hidden');
+    assert.equal(document.querySelector('#query').placeholder,'影城名稱、行政區或地址');
     assert.equal(document.querySelectorAll('#cinema-view .venue-card').length,38);
     assert.equal(document.querySelectorAll('#cinema-view .venue-card[data-coverage="directory"]').length,38-catalog.cinemas.length);
     assert.equal(document.querySelectorAll('#cinema-view .venue-card[data-coverage="synced"]').length,catalog.cinemas.length);
@@ -184,6 +186,8 @@ async function test() {
   try {
     const {document}=map.window;
     assert.equal(document.body.dataset.page,'map');
+    assert.equal(map.window.getComputedStyle(document.querySelector('.format-field')).display,'none','irrelevant map format filter hidden');
+    assert.equal(document.querySelector('#query').placeholder,'影城名稱、行政區或地址');
     assert.ok(!document.getElementById('map-layout').classList.contains('hidden'),'map view shown');
     assert.equal(document.querySelectorAll('#map-place-list .map-place').length,38);
     assert.ok(document.getElementById('map-cinema-status').textContent.includes('已接入'));
