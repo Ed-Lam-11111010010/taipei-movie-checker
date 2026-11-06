@@ -113,6 +113,14 @@ async function test() {
     assert.equal(document.body.dataset.page,'showtimes');
     const dates=[...new Set(catalog.screenings.filter(row=>new Date(row.startsAt).getTime()>clock).map(r=>r.date))].sort();
     assert.ok(dates.length);
+    assert.ok(document.querySelector('.showtimes-date-toolbar #date-picker'), 'date picker is next to seven-day shortcuts');
+    assert.equal(document.querySelectorAll('.showtimes-date-toolbar .date-button').length, 7, 'seven date shortcuts');
+    assert.equal(document.querySelectorAll('.showtimes-date-toolbar .date-button small').length, 7, 'daily availability labels');
+    assert.equal(document.querySelector('#sort-note').tagName, 'DETAILS', 'technical version explanation starts as a disclosure');
+    assert.ok(!document.querySelector('#sort-note').open, 'version explanation collapsed initially');
+    const filterPanel=document.getElementById('filter-disclosure');
+    assert.ok(filterPanel && filterPanel.open, 'desktop filters usable');
+    assert.ok(document.getElementById('filter-active-summary'), 'filter selection summary shown');
     const picker=document.getElementById('date-picker');
     picker.value=dates[0];picker.dispatchEvent(new Event('change',{bubbles:true}));
     assert.ok(document.querySelectorAll('#screening-view .screening-card').length>0,'showtime cards');
