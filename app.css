@@ -310,3 +310,6 @@
 @media (prefers-reduced-motion:reduce) {
   .page-showtimes .filter-disclosure>summary::after { transition:none; }
 }
+
+/* Cinema and map directories do not filter by screening format. */
+.page-cinemas .format-field,.page-map .format-field{display:none!important;}
