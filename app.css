@@ -4,7 +4,7 @@
       --paper: #f4f1e9;
       --card: #fffefa;
       --ink: #1d1e1a;
-      --muted: #74766d;
+      --muted: #64665d;
       --line: #deded4;
       --acid: #d8ff70;
       --purple: #5c45a4;
@@ -147,7 +147,6 @@
       .shell { padding: 0 16px; }
       .topbar { height: 62px; }
       .top-links { gap: 12px; }
-      .top-links a:first-child { display: none; }
       .hero { display: block; padding: 34px 0 20px; }
       h1 { font-size: clamp(38px, 11vw, 54px); }
       .hero-note { max-width: none; padding: 13px 0 0; }
@@ -236,12 +235,35 @@
 .page-showtimes .page-data-summary-wrap,.page-cinemas .page-data-summary-wrap,.page-map .page-data-summary-wrap{display:none;}
 .page-cinemas .view-switch,.page-map .view-switch,.page-showtimes .view-switch{display:none;}
 .page-cinemas .toolbar,.page-map .toolbar{display:none;}
-.page-map #extra-date-field,.page-map #source-health{display:none!important;}
+.page-cinemas #extra-date-field,.page-map #extra-date-field,.page-map #source-health{display:none!important;}
 .page-cinemas .movie-picker,.page-map .movie-picker{display:none;}
 .page-cinemas #sort-control,.page-cinemas #sort-note,.page-map #sort-control,.page-map #sort-note{display:none!important;}
 .page-showtimes .movie-title a{text-decoration:none;}.page-showtimes .movie-title a:hover{text-decoration:underline;}
 .page-map .map-route-link{display:inline-block;margin-top:10px;padding:10px 12px;border-radius:7px;background:var(--ink);color:var(--acid);font-size:12px;font-weight:750;text-decoration:none;}
 .page-cinemas .live-source-section{background:transparent;}
+
+.directory-filter-disclosure{grid-column:1/-1;margin-top:10px;border:1px solid var(--line);border-radius:7px;background:var(--card);}
+.directory-filter-disclosure>summary{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;padding:9px 12px;list-style:none;cursor:pointer;font-size:12px;font-weight:750;}
+.directory-filter-disclosure>summary::-webkit-details-marker{display:none;}
+.directory-filter-disclosure>summary span{color:var(--muted);font-size:11px;font-weight:500;}
+.directory-filter-options{padding:0 12px 12px;}
+.directory-filter-options .field:first-child{grid-column:auto;}
+.directory-filter-disclosure>summary:focus-visible{outline:3px solid var(--purple);outline-offset:-3px;}
+
+@media(max-width:620px){
+  .hero{display:block;padding:20px 0 12px;}
+  .hero .eyebrow{margin-bottom:7px;font-size:10px;}
+  h1{font-size:clamp(31px,8.2vw,38px);line-height:1.12;}
+  .hero-note{max-width:none;margin:8px 0 0;padding:0;font-size:11px;line-height:1.5;}
+  .hero-note strong{display:block;margin-bottom:2px;}
+  .demo-banner{gap:9px;padding:9px 11px;font-size:11px;line-height:1.45;}
+  .demo-icon{width:19px;height:19px;flex-basis:19px;}
+  .page-data-summary-wrap{margin:9px 0 2px;padding:8px 10px;gap:7px;}
+  .page-movies .movie-explorer{margin:10px 0 20px;padding:13px;}
+  .film-explorer-head h2{font-size:24px;}
+  .film-explorer-head p:not(.eyebrow){margin-top:6px;font-size:12px;line-height:1.5;}
+  .film-tools{gap:9px;margin:13px 0 10px;}
+}
 @media(max-width:760px){.topbar{align-items:flex-start;}.topbar .demo-label{display:none}.site-nav{width:100%;justify-content:space-between}.site-nav a{padding:9px;flex:1;text-align:center;font-size:11px}.hero{padding-top:26px}.page-jump-grid{grid-template-columns:1fr;}}
 
 /* Directory-only cinema entries are never represented as zero-film cinemas. */
@@ -266,3 +288,79 @@
 .developer-details>summary:focus-visible{outline:3px solid var(--purple);outline-offset:-3px;}
 .developer-details #source-health{padding:12px 16px;border-top:1px solid var(--line);white-space:pre-line;max-height:280px;overflow-y:auto;font-size:11px;line-height:1.7;margin:0;}
 .page-map .developer-details{display:none;}
+
+/* UX pass: showtimes first, one clear calendar, readable filters and comfortable tap targets. */
+.page-showtimes .showtimes-date-toolbar { align-items:flex-end; gap:16px; }
+.page-showtimes .showtimes-date-toolbar .date-strip { flex:1 1 0; min-width:0; }
+.page-showtimes .date-button { min-height:74px; min-width:100px; }
+.page-showtimes .date-button small { display:block; margin-top:5px; font-size:11px; line-height:1.25; color:var(--muted); }
+.page-showtimes .date-button[aria-pressed="true"] small { color:var(--acid); }
+.page-showtimes .date-jump { flex:0 0 180px; display:flex; flex-direction:column; gap:6px; color:var(--ink); font-size:12px; font-weight:700; }
+.page-showtimes .date-jump input { width:100%; min-height:44px; padding:8px 11px; border:1px solid var(--line); border-radius:9px; background:var(--card); color:var(--ink); font-size:14px; }
+.page-showtimes .date-jump input:focus-visible { outline-offset:2px; }
+.page-showtimes .filter-disclosure>summary { display:flex; flex-direction:column; align-items:flex-start; gap:4px; position:relative; padding-right:24px; list-style:none; cursor:pointer; font:500 21px/1.3 var(--serif); }
+.page-showtimes .filter-disclosure>summary::-webkit-details-marker { display:none; }
+.page-showtimes .filter-disclosure>summary::after { content:'⌄'; position:absolute; top:0; right:0; font:700 20px/1 sans-serif; color:var(--purple); transition:transform .15s ease; }
+.page-showtimes .filter-disclosure[open]>summary::after { transform:rotate(180deg); }
+.page-showtimes .filter-disclosure>summary span { font:500 11px/1.5 "Noto Sans TC","PingFang TC",sans-serif; color:var(--muted); }
+.page-showtimes .filter-disclosure[open]>summary { margin-bottom:12px; }
+.page-showtimes .field input,.page-showtimes .field select { font-size:14px; min-height:42px; }
+.page-showtimes .sort-details { margin:0 0 12px; font-size:12px; color:var(--muted); }
+.page-showtimes .sort-details>summary { display:inline-block; padding:5px 0; cursor:pointer; color:var(--purple); font-size:12px; font-weight:700; }
+.page-showtimes .sort-details p { margin:6px 0 0; line-height:1.65; }
+.page-showtimes .screening-actions .action-link { min-height:44px; padding:10px 12px; font-size:12px; }
+.page-showtimes .screening-actions .map-quick-link { font-size:12px; }
+.page-cinemas .venue-actions a { flex:1 1 142px; min-height:44px; padding:10px 9px; font-size:12px; line-height:1.45; }
+@media (hover:hover) {
+  .page-showtimes .date-button:hover { border-color:var(--purple); }
+  .page-showtimes .sort-details>summary:hover { text-decoration:underline; }
+  .page-showtimes .filter-disclosure>summary:hover { color:var(--purple); }
+  .page-cinemas .venue-actions a:hover { border-color:var(--purple); background:var(--paper); }
+}
+@media (max-width:620px) {
+  .page-showtimes .showtimes-date-toolbar { display:flex; flex-direction:column; align-items:stretch; gap:8px; }
+  .page-showtimes .showtimes-date-toolbar .date-strip { width:100%; flex:auto; }
+  .page-showtimes .date-jump { width:100%; flex:auto; display:grid; grid-template-columns:1fr minmax(160px,1.4fr); gap:12px; align-items:center; }
+  .page-showtimes .date-button { min-width:96px; min-height:72px; }
+  .page-showtimes .filters { margin-top:2px; padding:16px; }
+  .page-showtimes .filter-disclosure>summary { min-height:44px; justify-content:center; }
+  .page-showtimes .clear-button { min-height:44px; font-size:13px; }
+  .page-showtimes .field input,.page-showtimes .field select { min-height:44px; }
+  .page-showtimes .screening-card { gap:10px; }
+  .page-cinemas .venue-actions a { flex-basis:130px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .page-showtimes .filter-disclosure>summary::after { transition:none; }
+}
+
+/* Keep navigation and the primary controls inside narrow phone viewports. */
+@media (max-width:620px) {
+  .topbar { height:auto; min-height:0; align-items:center; }
+  .top-links { width:100%; min-width:0; flex:1 0 100%; }
+  .site-nav { width:100%; min-width:0; flex:1; }
+  .site-nav a { min-width:0; min-height:44px; padding:9px 8px; }
+}
+@media (max-width:420px) {
+  h1 { font-size:clamp(30px,8.2vw,36px); line-height:1.1; }
+  .filter-controls { grid-template-columns:minmax(0,1fr); }
+  .filter-controls > * { min-width:0; }
+  .page-showtimes .date-jump { grid-template-columns:minmax(0,1fr); }
+  .page-showtimes .date-jump input { min-width:0; }
+}
+@media (max-width:620px) {
+  .field input,.field select,.date-jump input,.sort-control select,
+  .clear-button,.refresh-button { min-height:44px; }
+  .movie-picker > summary,.movie-clear,.page-showtimes .sort-details > summary { min-height:44px; }
+  .page-showtimes .sort-details > summary { display:inline-flex; align-items:center; }
+  .page-showtimes .screening-actions .map-quick-link { display:inline-flex; min-height:44px; align-items:center; }
+}
+
+/* Cinema and map directories do not filter by screening format. */
+.page-cinemas .format-field,.page-map .format-field{display:none!important;}
+
+@media(max-width:620px){
+  .hero{padding:20px 0 12px;}
+  .hero-note{margin-top:7px;}
+  .demo-banner{padding:9px 11px;}
+  .page-map .layout{flex-direction:column-reverse;}
+}

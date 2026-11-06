@@ -123,7 +123,12 @@
         button.dataset.date = key;
         button.setAttribute('aria-pressed', String(key === selectedDate));
         const dayName = offset === 0 ? '今天' : offset === 1 ? '明天' : dateLabel(key, { weekday: 'short' });
-        button.innerHTML = `<span>${dayName}</span><strong>${dateLabel(key, { month: 'numeric', day: 'numeric' })}</strong>`;
+        const available = showings.filter(row => row.date === key && isUpcoming(row)).length;
+        button.innerHTML = '<span>' + dayName + '</span><strong>' +
+          dateLabel(key, { month: 'numeric', day: 'numeric' }) + '</strong><small>' +
+          (available ? available + ' 場' : '尚無資料') + '</small>';
+        button.setAttribute('aria-label', dayName + ' ' + key + '，' +
+          (available ? available + ' 個已取得場次' : '本站尚無場次資料'));
         button.addEventListener('click', () => {
           selectedDate = key;
           document.querySelectorAll('.date-button').forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.date === selectedDate)));
@@ -299,7 +304,7 @@
           '<p>'+esc(cinema.address)+'<br>'+(synced?('選定日期有 '+count+' 筆已取得場次；沒有資料不代表停映。'):'目前不提供自動場次；請前往來源網站核對。')+'</p>'+
           '<div class="venue-actions"><a class="map-link" href="'+mapsSearch(cinema)+'" target="_blank" rel="noopener noreferrer">Google Maps ↗</a>'+
           official+local+booking+schedule+'</div></article>';
-      }).join('');
+      }).join('') || '<p class="empty" role="status">找不到符合條件的影城。請調整搜尋或清除篩選。</p>';
       list.classList.toggle('hidden',selectedView!=='cinemas');
     }
     function renderMap(filters) {
@@ -319,9 +324,16 @@
     function render() {
       document.getElementById('date-picker').value=selectedDate;
       const filters = currentFilters();
+      const activeCount = [filters.query, filters.district, filters.cinema, filters.format]
+        .filter(Boolean).length + Number(filters.movieKeys.length > 0);
+      const filterSummary = document.getElementById('filter-active-summary');
+      if (filterSummary) filterSummary.textContent = activeCount
+        ? '已套用 ' + activeCount + ' 項條件'
+        : '電影、行政區、影城與版本';
       const allMovieDates = filters.movieKeys.length > 0;
       $('#date-picker').disabled = allMovieDates;
-      $('#date-scope-note').textContent = allMovieDates ? '已選電影：顯示所有日期；取消電影勾選後可按日期查看。' : '其他日期（含預售場次）';
+      $('#date-picker').title = allMovieDates ? '已選電影時顯示所有已取得日期；取消電影勾選後可再選日期。' : '選擇其他觀影日期';
+      $('#date-scope-note').textContent = allMovieDates ? '已選電影：涵蓋全部日期' : '跳至其他日期';
       document.querySelectorAll('.date-button').forEach(item => { item.disabled = allMovieDates; item.setAttribute('aria-pressed', String(!allMovieDates && item.dataset.date === selectedDate)); });
       renderMoviePicker(filters);
       $('#sort-control').classList.toggle('hidden', selectedView !== 'screenings');
@@ -552,7 +564,7 @@
       const fromSources = !active && sourceMode();
       document.querySelector('.demo-banner div').innerHTML = active
         ? '<b>個人匯入資料（未驗證）</b>此瀏覽器的個人資料未經影城核對。'
-        : '<b>場次資訊僅供參考</b>放映時間、票價與可購買狀態請以影城或售票平台為準。';
+        : '<b>場次僅供參考</b>時間與票價可能變更；購票前請至影城或售票平台確認。';
       document.querySelector('.demo-section-title h2').textContent = fromSources ? '已取得的電影場次' : active ? '個人匯入場次' : '電影場次查詢';
       document.querySelector('.demo-section-title p').textContent = active
         ? '顯示個人匯入的場次，尚未經影城官方驗證。'
@@ -563,7 +575,7 @@
       document.querySelector('.demo-label').textContent = active ? '個人資料 · 未驗證' : fromSources ? '已發布場次' : '場次載入中';
       const liveCountLabel = document.querySelector('.film-explorer-kicker');
       if (liveCountLabel) liveCountLabel.textContent = fromSources
-        ? catalogue.cinemas.length + ' 間影城已接入電影時刻'
+        ? '場次資料收錄 ' + catalogue.cinemas.length + ' 間影城'
         : active ? '個人匯入 · 未驗證' : '正在讀取影城場次';
       document.getElementById('personal-import-reset').disabled = !active;
       document.getElementById('refresh-catalog').disabled = active;
@@ -634,6 +646,12 @@
 
     document.getElementById('refresh-catalog').addEventListener('click', refreshCatalog);
 
+    const compactFilters = typeof window.matchMedia === 'function' &&
+      window.matchMedia('(max-width: 620px)').matches;
+    const filterDisclosure = document.getElementById('filter-disclosure');
+    if (filterDisclosure && compactFilters) filterDisclosure.open = false;
+    const directoryFilterDisclosure = document.getElementById('directory-filter-disclosure');
+    if (directoryFilterDisclosure && compactFilters) directoryFilterDisclosure.open = false;
     setPersonalMode(false);
     renderSourceStatus();
     buildDates(); buildFilters();
@@ -659,4 +677,3 @@
     }
     setInterval(updateClock, 15000);
     document.addEventListener('visibilitychange', updateClock);
-  
