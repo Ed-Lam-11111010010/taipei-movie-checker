@@ -74,18 +74,15 @@
  
 <div class="demo-section-title"><h2>電影場次查詢</h2><p>先讀取已發布的來源快照；顯示時會標示資料來源、查核狀態及台北時間。場次可能變更，訂票前請前往原站核對。</p></div>
 
-      <section class="toolbar" aria-label="日期與檢視方式">
-        <div id="date-strip" class="date-strip" role="group" aria-label="選擇觀影日期"></div>
-        <div class="view-switch" role="group" aria-label="選擇檢視方式">
-          <button type="button" data-view="screenings" aria-pressed="true">場次</button>
-          <button type="button" data-view="cinemas" aria-pressed="false">影城</button>
-          <button type="button" data-view="map" aria-pressed="false">地圖</button>
-        </div>
+      <section class="toolbar showtimes-date-toolbar" aria-label="選擇觀影日期">
+        <div id="date-strip" class="date-strip" role="group" aria-label="未來七天的場次日期"></div>
+        <label class="date-jump" id="extra-date-field"><span id="date-scope-note">跳至其他日期</span><input id="date-picker" type="date" aria-label="選擇其他觀影日期"></label>
       </section>
 
       <div class="layout">
         <aside class="filters" aria-labelledby="filter-title">
-          <h2 id="filter-title">縮小選擇</h2>
+          <details class="filter-disclosure" id="filter-disclosure" open>
+            <summary id="filter-title">篩選場次 <span id="filter-active-summary">可依電影、影城與版本縮小範圍</span></summary>
           <div class="filter-controls">
             <details class="movie-picker" id="movie-picker"><summary>選擇電影（可多選）<span id="movie-selection-status">全部電影／版本</span></summary><div class="movie-picker-body"><button class="movie-clear" id="movie-clear" type="button">取消電影勾選</button><p class="movie-picker-note">列出已取得資料中所有日期、影城與版本的電影。勾選後跨日期顯示該電影的未開演場次；取消勾選後恢復按日期查看。下列數量為符合其他篩選的跨日期場次數。</p><div class="movie-options" id="movie-options" role="group" aria-label="選擇電影與版本"></div></div></details>
             <label class="field query-field"><span>關鍵字搜尋（選填）</span><input id="query" type="search" placeholder="片名可直接勾選；也可搜尋影城或地址" autocomplete="off"></label>
@@ -94,7 +91,8 @@
             <label class="field"><span>放映版本</span><select id="format"><option value="">全部版本</option></select></label>
           </div>
           <button id="clear" class="clear-button" type="button">清除篩選</button>
-          <p class="filter-foot">影城清單未涵蓋台北市全部戲院。海報取自官方電影頁，點圖可查看電影資料；未配對或載入失敗時顯示暫無海報。</p>
+          </details>
+          <p class="filter-foot">已收錄台北及新北 38 間影城；同步場次可能不完整。海報來自對應電影來源，無法載入時會顯示替代資訊。</p>
         </aside>
 
         <section class="results" aria-labelledby="results-title">
@@ -102,11 +100,11 @@
             <div><h2 id="results-title">今日場次</h2><p id="selected-date"></p></div>
             <div class="results-controls"><label class="sort-control" id="sort-control">排序<select id="sort-order" aria-describedby="sort-note"><option value="time">時間（最近開演）</option><option value="movie">電影（各版本分開）</option><option value="version">版本（各電影分開）</option></select></label><span id="result-count" class="result-count" aria-live="polite"></span></div>
           </div>
-          <p class="sort-note" id="sort-note">同義版本合併選擇與計數，例如「數位(英)」與「數位‧英文版」統一為「數位（英語）」。不同語言、3D、特殊影廳及活動場保留區分；各場次仍顯示官方原始版本。</p>
+          <details class="sort-details" id="sort-note"><summary>電影版本如何分類？</summary><p>相同語言與版本會合併篩選，例如「數位(英)」與「數位‧英文版」視為「數位（英語）」。3D、特殊影廳與活動場仍保留區分，場次卡會顯示來源提供的版本名稱。</p></details>
           <div class="status-line"><span class="status-dot" aria-hidden="true"></span><span id="sync-time" role="status" aria-live="polite">讀取已發布的來源快照…</span><button type="button" class="refresh-button" id="refresh-catalog" aria-describedby="refresh-note">↻ 重新載入已發布場次</button></div>
           <div class="refresh-help hidden" id="refresh-help"><p>無法讀取已發布的場次快照。請確認網路後再試；目前顯示的資料會保留。</p></div>
           <p class="sr-only" id="refresh-note">重新載入 GitHub Pages 已發布的來源快照，保留目前篩選；資料由站點排程更新，不會從瀏覽器直接抓取影城。</p>
-          <details id="source-details" class="developer-details"><summary>進階來源資訊（唯讀）</summary><div id="source-health" class="filter-foot" aria-label="影城同步來源明細"></div></details><label class="field" id="extra-date-field" style="margin:0 0 16px"><span id="date-scope-note">其他日期（含預售場次）</span><input id="date-picker" type="date"></label><div id="screening-view" class="screening-list"></div>
+          <div id="screening-view" class="screening-list"></div><details id="source-details" class="developer-details"><summary>進階來源資訊（唯讀）</summary><div id="source-health" class="filter-foot" aria-label="影城同步來源明細"></div></details>
           <div id="cinema-view" class="venue-list hidden"></div>
           <div id="map-layout" class="map-layout hidden">
             <div class="map-destination"><span class="venue-kicker">GOOGLE MAPS · 地點導覽</span><h3 id="map-selected-name"></h3><p id="map-selected-address"></p><p id="map-cinema-status" class="map-status-note" aria-live="polite"></p><iframe id="theatre-map" class="theatre-map" title="Google Maps 影城位置" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe><span class="map-hint">可直接在此拖曳、縮放與查看位置；選擇其他影城會切換地圖。地圖由 Google 提供。</span><a id="map-launch" class="map-open" target="_blank" rel="noopener noreferrer">地圖無法載入？在 Google Maps 查看 ↗</a><a id="map-showtimes" class="map-route-link" href="./showtimes.html">查看這間影城場次 →</a></div>
