@@ -6,6 +6,16 @@ const {JSDOM, ResourceLoader, VirtualConsole} = require('jsdom');
 
 const root = path.resolve(__dirname, '..');
 const catalog = JSON.parse(fs.readFileSync(path.join(root, 'catalog.json'), 'utf8'));
+const appCss = fs.readFileSync(path.join(root, 'app.css'), 'utf8');
+function luminance(hex) {
+  const channels = hex.slice(1).match(/../g).map(value => parseInt(value, 16) / 255)
+    .map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+}
+function contrastRatio(foreground, background) {
+  const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+}
 const pageNames = ['index.html', 'showtimes.html', 'cinemas.html', 'map.html'];
 const permittedFiles = new Set([...pageNames, 'app.css', 'movie-pages.css',
   'demo-catalog.js', 'theater-directory.js', 'app-core.js', 'movie-pages.js']);
@@ -62,6 +72,11 @@ async function loadPage(name) {
   await waitFor(() => win.document.getElementById('sync-time')?.textContent.includes('已重新載入'));
   if (errors.length) throw new Error(name + ': ' + errors.join('\n'));
   assert.equal(win.document.querySelectorAll('.site-nav a[aria-current="page"]').length, 1, 'one active nav');
+  assert.equal(win.document.querySelectorAll('.site-nav a').length, 4, 'all four page links remain available');
+  for (const link of win.document.querySelectorAll('.site-nav a')) {
+    link.focus();
+    assert.equal(win.document.activeElement, link, 'navigation link can receive keyboard focus');
+  }
   assert.equal(win.document.querySelectorAll('.demo-label').length, 1);
   assert.equal(win.document.querySelectorAll('#toggle-demo-preview').length,0,'no public demo switch');
   assert.ok(!win.document.querySelector('.demo-banner').textContent.includes('虛構'),'public banner should describe source data');
@@ -77,6 +92,24 @@ async function loadPage(name) {
   return dom;
 }
 async function test() {
+  const muted = /--muted:\s*(#[0-9a-f]{6})/i.exec(appCss)?.[1];
+  const paper = /--paper:\s*(#[0-9a-f]{6})/i.exec(appCss)?.[1];
+  const card = /--card:\s*(#[0-9a-f]{6})/i.exec(appCss)?.[1];
+  assert.ok(muted && paper && card, 'readable theme color tokens exist');
+  assert.ok(contrastRatio(muted, paper) >= 4.5, 'muted copy meets WCAG AA on paper');
+  assert.ok(contrastRatio(muted, card) >= 4.5, 'muted copy meets WCAG AA on cards');
+  assert.match(appCss, /\.top-links\s*\{[^}]*flex:\s*1 0 100%/,
+    'mobile navigation moves below the brand instead of shrinking beside it');
+  assert.match(appCss, /\.site-nav a\s*\{[^}]*min-height:\s*44px/,
+    'mobile navigation keeps comfortable touch targets');
+  assert.doesNotMatch(appCss, /\.top-links a:first-child\s*\{\s*display:\s*none/,
+    'mobile does not hide the first page link');
+  assert.match(appCss, /\.filter-controls\s*\{\s*grid-template-columns:\s*minmax\(0,1fr\)/,
+    'narrow-phone filters use a non-overflowing single column');
+  assert.match(appCss, /\.page-showtimes \.date-jump\s*\{\s*grid-template-columns:\s*minmax\(0,1fr\)/,
+    'narrow-phone date picker stacks inside the page width');
+  assert.match(appCss, /\.field input,\.field select,\.date-jump input,\.sort-control select,[\s\S]*?\.clear-button,\.refresh-button\s*\{\s*min-height:\s*44px/,
+    'mobile filters, sorting, refresh and reset controls meet touch target guidance');
   assert.ok(catalog.cinemas.length >= 12 && catalog.cinemas.length <= 38, 'synced cinema count');
   assert.ok(catalog.screenings.length > 100);
   const movies = await loadPage('index.html');

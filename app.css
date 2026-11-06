@@ -4,7 +4,7 @@
       --paper: #f4f1e9;
       --card: #fffefa;
       --ink: #1d1e1a;
-      --muted: #74766d;
+      --muted: #64665d;
       --line: #deded4;
       --acid: #d8ff70;
       --purple: #5c45a4;
@@ -147,7 +147,6 @@
       .shell { padding: 0 16px; }
       .topbar { height: 62px; }
       .top-links { gap: 12px; }
-      .top-links a:first-child { display: none; }
       .hero { display: block; padding: 34px 0 20px; }
       h1 { font-size: clamp(38px, 11vw, 54px); }
       .hero-note { max-width: none; padding: 13px 0 0; }
@@ -309,6 +308,28 @@
 }
 @media (prefers-reduced-motion:reduce) {
   .page-showtimes .filter-disclosure>summary::after { transition:none; }
+}
+
+/* Keep navigation and the primary controls inside narrow phone viewports. */
+@media (max-width:620px) {
+  .topbar { height:auto; min-height:0; align-items:center; }
+  .top-links { width:100%; min-width:0; flex:1 0 100%; }
+  .site-nav { width:100%; min-width:0; flex:1; }
+  .site-nav a { min-width:0; min-height:44px; padding:9px 8px; }
+}
+@media (max-width:420px) {
+  h1 { font-size:clamp(34px,10vw,40px); line-height:1.15; }
+  .filter-controls { grid-template-columns:minmax(0,1fr); }
+  .filter-controls > * { min-width:0; }
+  .page-showtimes .date-jump { grid-template-columns:minmax(0,1fr); }
+  .page-showtimes .date-jump input { min-width:0; }
+}
+@media (max-width:620px) {
+  .field input,.field select,.date-jump input,.sort-control select,
+  .clear-button,.refresh-button { min-height:44px; }
+  .movie-picker > summary,.movie-clear,.page-showtimes .sort-details > summary { min-height:44px; }
+  .page-showtimes .sort-details > summary { display:inline-flex; align-items:center; }
+  .page-showtimes .screening-actions .map-quick-link { display:inline-flex; min-height:44px; align-items:center; }
 }
 
 /* Cinema and map directories do not filter by screening format. */

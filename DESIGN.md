@@ -8,7 +8,7 @@ colors:
   paper: "#f4f1e9"
   card: "#fffefa"
   ink: "#1d1e1a"
-  muted: "#74766d"
+  muted: "#64665d"
   line: "#deded4"
   highlight: "#d8ff70"
   warning: "#fff1cd"
