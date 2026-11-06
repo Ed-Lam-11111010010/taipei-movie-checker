@@ -67,3 +67,11 @@
   .film-tile-title { font-size:14px; line-height:1.45; }
   .film-session-actions { width:100%; }
 }
+
+@media(max-width:620px) {
+  .page-movies .movie-explorer { margin:10px 0 20px; padding:13px; }
+  .page-movies .film-explorer-head { gap:8px; }
+  .page-movies .film-explorer-head h2 { font-size:24px; }
+  .page-movies .film-explorer-head p:not(.eyebrow) { margin-top:6px; font-size:12px; line-height:1.5; }
+  .page-movies .film-tools { gap:9px; margin:13px 0 10px; }
+}

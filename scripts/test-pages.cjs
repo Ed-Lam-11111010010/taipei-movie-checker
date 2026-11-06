@@ -7,6 +7,7 @@ const {JSDOM, ResourceLoader, VirtualConsole} = require('jsdom');
 const root = path.resolve(__dirname, '..');
 const catalog = JSON.parse(fs.readFileSync(path.join(root, 'catalog.json'), 'utf8'));
 const appCss = fs.readFileSync(path.join(root, 'app.css'), 'utf8');
+const movieCss = fs.readFileSync(path.join(root, 'movie-pages.css'), 'utf8');
 function luminance(hex) {
   const channels = hex.slice(1).match(/../g).map(value => parseInt(value, 16) / 255)
     .map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
@@ -87,6 +88,37 @@ async function loadPage(name) {
   assert.ok(importer,'internal CSV import structure can remain for future work');
   assert.equal(win.getComputedStyle(importer).display,'none','no visible demo or test importer');
 
+  const coverageLabel=win.document.querySelector('.film-explorer-kicker');
+  assert.equal(coverageLabel.textContent.trim(),'場次資料收錄 '+catalog.cinemas.length+' 間影城',
+    'cinema coverage count is derived from the loaded catalog');
+  const sourceSection=win.document.getElementById('live-showtimes');
+  assert.ok(sourceSection,'historical source links remain available');
+  assert.match(sourceSection.textContent,/最早接入同步的 12 間影城來源連結/,
+    '12 is identified only as the historical source-link group');
+  const nonHistoricalMarkup=html.replace(/<section\b[^>]*id="live-showtimes"[^>]*>[\s\S]*?<\/section>/i,'');
+  assert.doesNotMatch(nonHistoricalMarkup,/(?:12|38)\s*間影城/,
+    'static UI copy has no hardcoded current cinema count outside the historical source section');
+  assert.doesNotMatch(win.document.querySelector('.hero').textContent,/個人非商業\s*POC/i,
+    'hero copy uses visitor-facing wording');
+  assert.match(win.document.querySelector('.demo-banner').textContent,/時間與票價可能變更/,
+    'the concise source-data disclaimer remains visible');
+  const extraDateField=win.document.getElementById('extra-date-field');
+  assert.ok(extraDateField && extraDateField.querySelector('#date-picker'),
+    'shared date-picker remains in the DOM on every page');
+  if (name.startsWith('cinemas.html') || name.startsWith('map.html')) {
+    assert.equal(win.getComputedStyle(extraDateField).display,'none',
+      'directory pages hide a date control that does not filter their listing');
+    const directoryDisclosure=win.document.getElementById('directory-filter-disclosure');
+    assert.ok(directoryDisclosure && directoryDisclosure.open,
+      'secondary directory filters are accessible and expanded by default on desktop');
+    assert.ok(!win.document.getElementById('query').closest('#directory-filter-disclosure'),
+      'primary cinema search remains outside the secondary-filter disclosure');
+  } else if (name.startsWith('showtimes.html')) {
+    assert.notEqual(win.getComputedStyle(extraDateField).display,'none',
+      'Showtimes keeps its later-date picker visible');
+    assert.equal(win.document.getElementById('directory-filter-disclosure'),null);
+  }
+
   assert.equal(win.document.querySelectorAll('[id]').length,
     new Set([...win.document.querySelectorAll('[id]')].map(el => el.id)).size, 'unique IDs');
   return dom;
@@ -108,6 +140,16 @@ async function test() {
     'narrow-phone filters use a non-overflowing single column');
   assert.match(appCss, /\.page-showtimes \.date-jump\s*\{\s*grid-template-columns:\s*minmax\(0,1fr\)/,
     'narrow-phone date picker stacks inside the page width');
+  assert.match(appCss, /\.page-cinemas #extra-date-field[^{}]*\{[^}]*display:none!important/,
+    'cinema directory date control is hidden without removing the shared input');
+  assert.match(appCss, /\.page-map #extra-date-field[^{}]*\{[^}]*display:none!important/,
+    'map directory date control is hidden without removing the shared input');
+  assert.match(appCss, /\.page-map \.layout\s*\{[^}]*flex-direction:column-reverse/,
+    'the mobile map view precedes secondary search filters');
+  assert.match(appCss, /\.directory-filter-disclosure>summary[^{}]*\{[^}]*min-height:44px/,
+    'secondary directory filters have an accessible disclosure target');
+  assert.match(movieCss, /\.page-movies \.movie-explorer\s*\{[^}]*margin:10px 0 20px/,
+    'mobile movie discovery starts closer to the hero');
   assert.match(appCss, /\.field input,\.field select,\.date-jump input,\.sort-control select,[\s\S]*?\.clear-button,\.refresh-button\s*\{\s*min-height:\s*44px/,
     'mobile filters, sorting, refresh and reset controls meet touch target guidance');
   assert.ok(catalog.cinemas.length >= 12 && catalog.cinemas.length <= 38, 'synced cinema count');
@@ -160,6 +202,16 @@ async function test() {
     assert.ok(document.querySelector('#screening-view .screening-card a[href*="index.html#movie="]'),'links to movie details');
     assert.ok(document.querySelector('#screening-view a.action-link'),'official ticket links');
     assert.ok(document.querySelector('.advanced-import'),'personal import remains available');
+    const query=document.getElementById('query');
+    query.value='__no_matching_movie_or_cinema__';
+    query.dispatchEvent(new Event('input',{bubbles:true}));
+    assert.equal(document.querySelectorAll('#screening-view .screening-card').length,0,
+      'showtime filters can reach an empty result');
+    assert.ok(!document.getElementById('empty-state').classList.contains('hidden'),
+      'empty showtime results have a visible explanation');
+    query.value='';query.dispatchEvent(new Event('input',{bubbles:true}));
+    assert.ok(document.querySelectorAll('#screening-view .screening-card').length>0,
+      'clearing the query restores showtimes');
     console.log('PASS Showtimes:',dates[0],document.querySelectorAll('#screening-view .screening-card').length,'session cards');
   } finally { showtimes.window.close(); }
 
@@ -191,6 +243,28 @@ async function test() {
     assert.equal(document.querySelectorAll('#cinema-view .venue-card .venue-coverage').length,38);
     assert.ok(document.querySelector('#cinema-view a[href*="showtimes.html?cinema="]'),'cinema-to-showtime route');
     assert.ok(document.querySelector('#live-showtimes .cinema-source-group'),'external source directory');
+    const cinemaQuery=document.getElementById('query');
+    cinemaQuery.value='台北';
+    cinemaQuery.dispatchEvent(new cinemas.window.Event('input',{bubbles:true}));
+    const searched=document.querySelectorAll('#cinema-view .venue-card').length;
+    assert.ok(searched>0 && searched<38,'cinema search filters the directory');
+    document.getElementById('clear').click();
+    assert.equal(document.querySelectorAll('#cinema-view .venue-card').length,38,
+      'reset restores all cinema directory cards');
+    cinemaQuery.value='__no_matching_cinema__';
+    cinemaQuery.dispatchEvent(new cinemas.window.Event('input',{bubbles:true}));
+    assert.equal(document.querySelectorAll('#cinema-view .venue-card').length,0,
+      'cinema directory search can reach an empty result');
+    assert.match(document.querySelector('#cinema-view').textContent,/找不到符合條件的影城/,
+      'empty cinema results have a visible explanation');
+    document.getElementById('clear').click();
+    assert.equal(document.querySelectorAll('#cinema-view .venue-card').length,38,
+      'clear restores the directory after an empty search');
+    const directoryDisclosure=document.getElementById('directory-filter-disclosure');
+    directoryDisclosure.querySelector('summary').click();
+    assert.equal(directoryDisclosure.open,false,'directory secondary filters collapse on request');
+    directoryDisclosure.querySelector('summary').click();
+    assert.equal(directoryDisclosure.open,true,'directory secondary filters can be reopened');
     console.log('PASS Cinemas: 25 Taipei City + 13 New Taipei entries; '+catalog.cinemas.length+' synchronized and '+(38-catalog.cinemas.length)+' directory-only');
   } finally { cinemas.window.close(); }
 

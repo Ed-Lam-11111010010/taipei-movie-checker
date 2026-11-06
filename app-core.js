@@ -304,7 +304,7 @@
           '<p>'+esc(cinema.address)+'<br>'+(synced?('選定日期有 '+count+' 筆已取得場次；沒有資料不代表停映。'):'目前不提供自動場次；請前往來源網站核對。')+'</p>'+
           '<div class="venue-actions"><a class="map-link" href="'+mapsSearch(cinema)+'" target="_blank" rel="noopener noreferrer">Google Maps ↗</a>'+
           official+local+booking+schedule+'</div></article>';
-      }).join('');
+      }).join('') || '<p class="empty" role="status">找不到符合條件的影城。請調整搜尋或清除篩選。</p>';
       list.classList.toggle('hidden',selectedView!=='cinemas');
     }
     function renderMap(filters) {
@@ -564,7 +564,7 @@
       const fromSources = !active && sourceMode();
       document.querySelector('.demo-banner div').innerHTML = active
         ? '<b>個人匯入資料（未驗證）</b>此瀏覽器的個人資料未經影城核對。'
-        : '<b>場次資訊僅供參考</b>放映時間、票價與可購買狀態請以影城或售票平台為準。';
+        : '<b>場次僅供參考</b>時間與票價可能變更；購票前請至影城或售票平台確認。';
       document.querySelector('.demo-section-title h2').textContent = fromSources ? '已取得的電影場次' : active ? '個人匯入場次' : '電影場次查詢';
       document.querySelector('.demo-section-title p').textContent = active
         ? '顯示個人匯入的場次，尚未經影城官方驗證。'
@@ -575,7 +575,7 @@
       document.querySelector('.demo-label').textContent = active ? '個人資料 · 未驗證' : fromSources ? '已發布場次' : '場次載入中';
       const liveCountLabel = document.querySelector('.film-explorer-kicker');
       if (liveCountLabel) liveCountLabel.textContent = fromSources
-        ? catalogue.cinemas.length + ' 間影城已接入電影時刻'
+        ? '場次資料收錄 ' + catalogue.cinemas.length + ' 間影城'
         : active ? '個人匯入 · 未驗證' : '正在讀取影城場次';
       document.getElementById('personal-import-reset').disabled = !active;
       document.getElementById('refresh-catalog').disabled = active;
@@ -646,9 +646,12 @@
 
     document.getElementById('refresh-catalog').addEventListener('click', refreshCatalog);
 
+    const compactFilters = typeof window.matchMedia === 'function' &&
+      window.matchMedia('(max-width: 620px)').matches;
     const filterDisclosure = document.getElementById('filter-disclosure');
-    if (filterDisclosure && typeof window.matchMedia === 'function' &&
-        window.matchMedia('(max-width: 620px)').matches) filterDisclosure.open = false;
+    if (filterDisclosure && compactFilters) filterDisclosure.open = false;
+    const directoryFilterDisclosure = document.getElementById('directory-filter-disclosure');
+    if (directoryFilterDisclosure && compactFilters) directoryFilterDisclosure.open = false;
     setPersonalMode(false);
     renderSourceStatus();
     buildDates(); buildFilters();
@@ -674,4 +677,3 @@
     }
     setInterval(updateClock, 15000);
     document.addEventListener('visibilitychange', updateClock);
-  

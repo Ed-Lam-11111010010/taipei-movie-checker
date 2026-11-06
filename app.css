@@ -235,12 +235,35 @@
 .page-showtimes .page-data-summary-wrap,.page-cinemas .page-data-summary-wrap,.page-map .page-data-summary-wrap{display:none;}
 .page-cinemas .view-switch,.page-map .view-switch,.page-showtimes .view-switch{display:none;}
 .page-cinemas .toolbar,.page-map .toolbar{display:none;}
-.page-map #extra-date-field,.page-map #source-health{display:none!important;}
+.page-cinemas #extra-date-field,.page-map #extra-date-field,.page-map #source-health{display:none!important;}
 .page-cinemas .movie-picker,.page-map .movie-picker{display:none;}
 .page-cinemas #sort-control,.page-cinemas #sort-note,.page-map #sort-control,.page-map #sort-note{display:none!important;}
 .page-showtimes .movie-title a{text-decoration:none;}.page-showtimes .movie-title a:hover{text-decoration:underline;}
 .page-map .map-route-link{display:inline-block;margin-top:10px;padding:10px 12px;border-radius:7px;background:var(--ink);color:var(--acid);font-size:12px;font-weight:750;text-decoration:none;}
 .page-cinemas .live-source-section{background:transparent;}
+
+.directory-filter-disclosure{grid-column:1/-1;margin-top:10px;border:1px solid var(--line);border-radius:7px;background:var(--card);}
+.directory-filter-disclosure>summary{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;padding:9px 12px;list-style:none;cursor:pointer;font-size:12px;font-weight:750;}
+.directory-filter-disclosure>summary::-webkit-details-marker{display:none;}
+.directory-filter-disclosure>summary span{color:var(--muted);font-size:11px;font-weight:500;}
+.directory-filter-options{padding:0 12px 12px;}
+.directory-filter-options .field:first-child{grid-column:auto;}
+.directory-filter-disclosure>summary:focus-visible{outline:3px solid var(--purple);outline-offset:-3px;}
+
+@media(max-width:620px){
+  .hero{display:block;padding:20px 0 12px;}
+  .hero .eyebrow{margin-bottom:7px;font-size:10px;}
+  h1{font-size:clamp(31px,8.2vw,38px);line-height:1.12;}
+  .hero-note{max-width:none;margin:8px 0 0;padding:0;font-size:11px;line-height:1.5;}
+  .hero-note strong{display:block;margin-bottom:2px;}
+  .demo-banner{gap:9px;padding:9px 11px;font-size:11px;line-height:1.45;}
+  .demo-icon{width:19px;height:19px;flex-basis:19px;}
+  .page-data-summary-wrap{margin:9px 0 2px;padding:8px 10px;gap:7px;}
+  .page-movies .movie-explorer{margin:10px 0 20px;padding:13px;}
+  .film-explorer-head h2{font-size:24px;}
+  .film-explorer-head p:not(.eyebrow){margin-top:6px;font-size:12px;line-height:1.5;}
+  .film-tools{gap:9px;margin:13px 0 10px;}
+}
 @media(max-width:760px){.topbar{align-items:flex-start;}.topbar .demo-label{display:none}.site-nav{width:100%;justify-content:space-between}.site-nav a{padding:9px;flex:1;text-align:center;font-size:11px}.hero{padding-top:26px}.page-jump-grid{grid-template-columns:1fr;}}
 
 /* Directory-only cinema entries are never represented as zero-film cinemas. */
@@ -318,7 +341,7 @@
   .site-nav a { min-width:0; min-height:44px; padding:9px 8px; }
 }
 @media (max-width:420px) {
-  h1 { font-size:clamp(34px,10vw,40px); line-height:1.15; }
+  h1 { font-size:clamp(30px,8.2vw,36px); line-height:1.1; }
   .filter-controls { grid-template-columns:minmax(0,1fr); }
   .filter-controls > * { min-width:0; }
   .page-showtimes .date-jump { grid-template-columns:minmax(0,1fr); }
@@ -334,3 +357,10 @@
 
 /* Cinema and map directories do not filter by screening format. */
 .page-cinemas .format-field,.page-map .format-field{display:none!important;}
+
+@media(max-width:620px){
+  .hero{padding:20px 0 12px;}
+  .hero-note{margin-top:7px;}
+  .demo-banner{padding:9px 11px;}
+  .page-map .layout{flex-direction:column-reverse;}
+}
