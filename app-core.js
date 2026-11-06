@@ -123,7 +123,12 @@
         button.dataset.date = key;
         button.setAttribute('aria-pressed', String(key === selectedDate));
         const dayName = offset === 0 ? '今天' : offset === 1 ? '明天' : dateLabel(key, { weekday: 'short' });
-        button.innerHTML = `<span>${dayName}</span><strong>${dateLabel(key, { month: 'numeric', day: 'numeric' })}</strong>`;
+        const available = showings.filter(row => row.date === key && isUpcoming(row)).length;
+        button.innerHTML = '<span>' + dayName + '</span><strong>' +
+          dateLabel(key, { month: 'numeric', day: 'numeric' }) + '</strong><small>' +
+          (available ? available + ' 場' : '尚無資料') + '</small>';
+        button.setAttribute('aria-label', dayName + ' ' + key + '，' +
+          (available ? available + ' 個已取得場次' : '本站尚無場次資料'));
         button.addEventListener('click', () => {
           selectedDate = key;
           document.querySelectorAll('.date-button').forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.date === selectedDate)));
@@ -319,6 +324,12 @@
     function render() {
       document.getElementById('date-picker').value=selectedDate;
       const filters = currentFilters();
+      const activeCount = [filters.query, filters.district, filters.cinema, filters.format]
+        .filter(Boolean).length + Number(filters.movieKeys.length > 0);
+      const filterSummary = document.getElementById('filter-active-summary');
+      if (filterSummary) filterSummary.textContent = activeCount
+        ? '已套用 ' + activeCount + ' 項條件'
+        : '電影、行政區、影城與版本';
       const allMovieDates = filters.movieKeys.length > 0;
       $('#date-picker').disabled = allMovieDates;
       $('#date-scope-note').textContent = allMovieDates ? '已選電影：顯示所有日期；取消電影勾選後可按日期查看。' : '其他日期（含預售場次）';
@@ -634,6 +645,9 @@
 
     document.getElementById('refresh-catalog').addEventListener('click', refreshCatalog);
 
+    const filterDisclosure = document.getElementById('filter-disclosure');
+    if (filterDisclosure && typeof window.matchMedia === 'function' &&
+        window.matchMedia('(max-width: 620px)').matches) filterDisclosure.open = false;
     setPersonalMode(false);
     renderSourceStatus();
     buildDates(); buildFilters();
