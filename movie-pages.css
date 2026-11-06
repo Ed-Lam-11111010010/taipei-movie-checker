@@ -51,3 +51,19 @@
 @media(max-width:1080px){.film-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:770px){.movie-explorer{padding:16px}.film-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.film-explorer-kicker{display:none}.film-session{grid-template-columns:1fr}.film-session-actions{justify-content:flex-start}.film-venue-guide{text-align:left}}
 @media(max-width:530px){.film-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.film-tile-info{padding:10px}.film-detail-head{grid-template-columns:96px minmax(0,1fr);gap:12px}.film-detail-head .poster{width:96px;height:144px}.film-detail-head h3{font-size:23px}.film-session-actions a{flex:1;text-align:center}.film-explorer-head{display:block}}
+
+/* UX polish: consistent, reachable actions without losing the editorial poster grid. */
+.film-tile-cta { display:inline-flex; align-items:center; min-height:44px; padding:6px 0; font-size:12px; line-height:1.45; }
+.film-date-tabs button { min-height:44px; font-size:13px; }
+.film-session-actions a { display:inline-flex; align-items:center; justify-content:center; min-height:44px; font-size:12px; }
+.film-venue-select select { min-height:44px; font-size:14px; }
+.film-tools input,.film-tools select { min-height:44px; font-size:14px; }
+@media (hover:hover) {
+  .film-tile:hover { border-color:var(--purple); }
+  .film-tile-cta:hover { text-decoration:underline; }
+}
+@media(max-width:530px) {
+  .film-tile-info { min-height:128px; }
+  .film-tile-title { font-size:14px; line-height:1.45; }
+  .film-session-actions { width:100%; }
+}
