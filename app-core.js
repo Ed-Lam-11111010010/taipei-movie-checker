@@ -332,7 +332,8 @@
         : '電影、行政區、影城與版本';
       const allMovieDates = filters.movieKeys.length > 0;
       $('#date-picker').disabled = allMovieDates;
-      $('#date-scope-note').textContent = allMovieDates ? '已選電影：顯示所有日期；取消電影勾選後可按日期查看。' : '其他日期（含預售場次）';
+      $('#date-picker').title = allMovieDates ? '已選電影時顯示所有已取得日期；取消電影勾選後可再選日期。' : '選擇其他觀影日期';
+      $('#date-scope-note').textContent = allMovieDates ? '已選電影：涵蓋全部日期' : '跳至其他日期';
       document.querySelectorAll('.date-button').forEach(item => { item.disabled = allMovieDates; item.setAttribute('aria-pressed', String(!allMovieDates && item.dataset.date === selectedDate)); });
       renderMoviePicker(filters);
       $('#sort-control').classList.toggle('hidden', selectedView !== 'screenings');
