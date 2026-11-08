@@ -459,14 +459,22 @@
       }
       updatePageSummary();
     }
-    async function refreshCatalog() {
+    // GitHub Actions updates catalog.json independently of already-open browsers.
+    // Recheck only while visible, and on return to an older tab.
+    const AUTO_CATALOG_CHECK_INTERVAL_MS = 15 * 60 * 1000;
+    let lastCatalogCheckAt = 0;
+    async function refreshCatalog(options = {}) {
+      const quiet = options?.quiet === true;
       const button = document.getElementById('refresh-catalog');
-      if (button.disabled) return;
+      if (button.disabled || personalImportActive) return;
+      lastCatalogCheckAt = Date.now(); // Throttle even if the network is unavailable.
       button.disabled = true;
-      button.textContent = '更新中…';
       button.setAttribute('aria-busy', 'true');
-      document.getElementById('refresh-help').classList.add('hidden');
-      document.getElementById('sync-time').textContent = '正在讀取已發布的來源快照…';
+      if (!quiet) {
+        button.textContent = '更新中…';
+        document.getElementById('refresh-help').classList.add('hidden');
+        document.getElementById('sync-time').textContent = '正在讀取已發布的來源快照…';
+      }
       try {
         const endpoint = hostedSnapshot ? './catalog.json' : location.protocol === 'file:' ? 'http://127.0.0.1:3001/api/catalog' : '/api/catalog';
         const response = await fetch(endpoint, { cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(120000) });
@@ -476,6 +484,9 @@
         const validSource = next.mode === 'source-snapshot' && next.screenings.every(item => item.isDemo === false && item.sourceUrl && /^https:\/\//.test(item.sourceUrl));
         if (next.schemaVersion !== 1 || !Array.isArray(next.cinemas) || !Array.isArray(next.screenings) || !Array.isArray(next.sources) ||
             !next.screenings.length || !(validDemo || validSource)) throw new Error('場次格式不正確，已保留原資料');
+        // Avoid rebuilding the entire UI (and disrupting focus/scroll) when the
+        // published snapshot has not changed since the previous background check.
+        if (quiet && next.checkedAt === catalogue.checkedAt) return;
         if (validDemo) mostRecentDemoCatalog = next;
         personalImportActive = false;
         demoPreviewActive = false;
@@ -491,11 +502,16 @@
         picker.max = addDateKeyDays(today, 180);
         setPersonalMode(false);
         buildDates(); buildFilters(); render();
-        renderSourceStatus('已重新載入已發布場次');
+        renderSourceStatus(quiet ? '已自動更新已發布場次' : '已重新載入已發布場次');
       } catch (error) {
-        document.getElementById('sync-time').textContent = '讀取失敗，保留目前場次。最近快照：'+stamp(catalogue.checkedAt)+'（台北時間）。'+(hostedSnapshot ? '請確認網路，然後重試。' : '請確認本機服務及網路，然後重試。');
-        document.getElementById('refresh-help').classList.remove('hidden');
-        document.getElementById('page-data-summary').textContent = document.getElementById('sync-time').textContent;
+        const age = Date.now() - Date.parse(catalogue.checkedAt);
+        // A temporary background network failure should not replace a fresh,
+        // already-usable snapshot with an alarming error. Surface it if stale.
+        if (!quiet || !Number.isFinite(age) || age < 0 || age > 12 * 3600000) {
+          document.getElementById('sync-time').textContent = '讀取失敗，保留目前場次。最近快照：'+stamp(catalogue.checkedAt)+'（台北時間）。'+(hostedSnapshot ? '請確認網路，然後重試。' : '請確認本機服務及網路，然後重試。');
+          document.getElementById('refresh-help').classList.remove('hidden');
+          document.getElementById('page-data-summary').textContent = document.getElementById('sync-time').textContent;
+        }
       } finally {
         button.disabled = false;
         button.textContent = '↻ 重新載入已發布場次';
@@ -674,6 +690,10 @@
         buildDates();
       }
       render();
+      if (hostedSnapshot && !personalImportActive &&
+          Date.now() - lastCatalogCheckAt >= AUTO_CATALOG_CHECK_INTERVAL_MS) {
+        void refreshCatalog({quiet: true});
+      }
     }
     setInterval(updateClock, 15000);
     document.addEventListener('visibilitychange', updateClock);
