@@ -20,6 +20,8 @@ concurrency:
 
 jobs:
   source-sync:
+    # A workflow/script edit on a feature branch must never publish to main.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
