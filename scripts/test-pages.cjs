@@ -212,6 +212,36 @@ async function test() {
     query.value='';query.dispatchEvent(new Event('input',{bubbles:true}));
     assert.ok(document.querySelectorAll('#screening-view .screening-card').length>0,
       'clearing the query restores showtimes');
+
+    // A browser tab left open must pick up new scheduled snapshots without
+    // disturbing its selected date, input state, or showing synthetic records.
+    const selectedDateBeforeAuto=picker.value;
+    let autoFetchCalls=0;
+    let remoteCatalog=catalog;
+    showtimes.window.fetch=async resource=>{
+      assert.equal(resource,'./catalog.json');
+      autoFetchCalls++;
+      return {ok:true,json:async()=>remoteCatalog};
+    };
+    showtimes.window.Date.now=()=>clock+10*60000;
+    document.dispatchEvent(new Event('visibilitychange'));
+    assert.equal(autoFetchCalls,0,'no needless refresh before 15-minute interval');
+    showtimes.window.Date.now=()=>clock+16*60000;
+    document.dispatchEvent(new Event('visibilitychange'));
+    await waitFor(()=>autoFetchCalls===1);
+    await waitFor(()=>!document.getElementById('refresh-catalog').disabled);
+    assert.equal(picker.value,selectedDateBeforeAuto,'unchanged background refresh keeps selected date');
+    assert.equal(query.value,'','unchanged background refresh keeps search state');
+    assert.ok(!document.getElementById('sync-time').textContent.includes('更新中'),
+      'background refresh does not flash manual loading state');
+    remoteCatalog={...catalog,checkedAt:new Date(clock+32*60000).toISOString()};
+    showtimes.window.Date.now=()=>clock+32*60000;
+    document.dispatchEvent(new Event('visibilitychange'));
+    await waitFor(()=>autoFetchCalls===2);
+    await waitFor(()=>document.getElementById('sync-time').textContent.includes('已自動更新已發布場次'));
+    assert.equal(picker.value,selectedDateBeforeAuto,'new background snapshot keeps selected date');
+    assert.equal(query.value,'','new background snapshot keeps current filters');
+    assert.equal(document.getElementById('refresh-catalog').disabled,false,'refresh button becomes available');
     console.log('PASS Showtimes:',dates[0],document.querySelectorAll('#screening-view .screening-card').length,'session cards');
   } finally { showtimes.window.close(); }
 
