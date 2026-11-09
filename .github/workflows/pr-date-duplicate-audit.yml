@@ -1,0 +1,70 @@
+name: Temporary source date and duplicate audit
+on:
+  push:
+    paths:
+      - ".github/workflows/pr-date-duplicate-audit.yml"
+permissions:
+  contents: read
+jobs:
+  date-audit:
+    if: github.ref == 'refs/heads/fix/showtime-duplicate-date-isolation-20261109'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_PATH: /tmp/movie-checker-date-audit/node_modules
+    steps:
+      - name: Checkout candidate without publishing
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install parser dependency
+        run: npm install --no-save --no-audit --no-fund --prefix /tmp/movie-checker-date-audit turndown@7.2.0
+      - name: Verify date-isolation parser fixtures
+        run: node scripts/sync-showtimes.cjs --self-test
+      - name: Preserve production snapshot for comparison
+        run: cp catalog.json "$RUNNER_TEMP/previous-catalog.json"
+      - name: Fetch 38 cinema sources in read-only audit
+        run: node scripts/sync-showtimes.cjs
+      - name: Compare live seven-day records and detect duplicates
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const before=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+'/previous-catalog.json','utf8'));
+          const after=JSON.parse(fs.readFileSync('catalog.json','utf8'));
+          const rowKey=x=>[x.cinemaId,x.sourceBusinessDate,x.title,x.format,x.time].join('|');
+          function counts(d) {
+            const map=new Map(), duplicate=[];
+            for(const x of d.screenings) {
+              const key=rowKey(x);
+              if(map.has(key))duplicate.push(key);
+              map.set(key,x);
+            }
+            const byDay={},byVenueDay={};
+            for(const x of d.screenings){
+              byDay[x.date]=(byDay[x.date]||0)+1;
+              const k=x.cinemaId+'|'+x.sourceBusinessDate;byVenueDay[k]=(byVenueDay[k]||0)+1;
+            }
+            return {keys:map,duplicate,byDay,byVenueDay};
+          }
+          const prev=counts(before),next=counts(after);
+          assert.equal(after.sources.length,38);
+          assert.equal(next.duplicate.length,0,'new parser created duplicates');
+          assert.ok(after.screenings.length>100,'source audit produced too few valid rows');
+          for(const src of after.sources)assert.equal(src.dateChecks?.length,7,'missing seven-day check '+src.cinemaId);
+          const removed=[...prev.keys.keys()].filter(x=>!next.keys.has(x));
+          const added=[...next.keys.keys()].filter(x=>!prev.keys.has(x));
+          const removedByDate={};
+          for(const k of removed){const date=k.split('|')[1];removedByDate[date]=(removedByDate[date]||0)+1;}
+          const removedByVenue={};
+          for(const k of removed){const key=k.split('|')[0];removedByVenue[key]=(removedByVenue[key]||0)+1;}
+          const ranked=Object.entries(removedByVenue).sort((a,b)=>b[1]-a[1]).slice(0,20);
+          console.log('DUPLICATE-DATE-AUDIT',JSON.stringify({
+            before:{checkedAt:before.checkedAt,total:before.screenings.length,duplicates:prev.duplicate.length,byDay:prev.byDay},
+            after:{checkedAt:after.checkedAt,total:after.screenings.length,duplicates:next.duplicate.length,byDay:next.byDay},
+            delta:{removed:removed.length,added:added.length,removedByDate,mostChangedVenues:ranked},
+            previewRemoved:removed.slice(0,12),
+            previewAdded:added.slice(0,12)
+          },null,2));
+          NODE
