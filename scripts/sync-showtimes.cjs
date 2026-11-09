@@ -302,7 +302,7 @@ function advertisedAtmoviesDays(md, cinema) {
   if (!expected || !md.includes(expected[1])) return [];
   const header = md.split(/^###\s+20\d{2}\/\d{2}\/\d{2}/m)[0];
   return vieshowDates(header).filter(date => date >= today &&
-    date <= addDays(today, ADVERTISED_LOOKAHEAD_DAYS - 1));
+    date <= addDays(today, LOOKAHEAD_DAYS - 1));
 }
 function queueAdvertisedAtmoviesDates(urls, md, cinema) {
   const expected = atmoviesFallback[cinema.id] || additionalAtmovies[cinema.id];
