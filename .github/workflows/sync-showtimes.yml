@@ -2,8 +2,9 @@ name: Update cinema source snapshots
 on:
   workflow_dispatch:
   schedule:
-    # 08:00, 14:00, 20:00 and 02:00 in Taipei (UTC+8).
-    - cron: "0 0,6,12,18 * * *"
+    # Around 08:17, 14:17, 20:17 and 02:17 Taipei (UTC+8).
+    # Avoid minute 00: GitHub Actions can delay/drop top-of-hour schedules.
+    - cron: "17 0,6,12,18 * * *"
   push:
     paths:
       - ".github/workflows/sync-showtimes.yml"
@@ -19,6 +20,8 @@ concurrency:
 
 jobs:
   source-sync:
+    # A workflow/script edit on a feature branch must never publish to main.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
