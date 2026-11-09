@@ -268,6 +268,7 @@ function parseAtmovies(md, cinema, date, url) {
   // A venue page can include multiple dated sections. Restrict parsing to
   // the requested date only; never attribute the next day's films to today.
   const expectedDate = date.replaceAll('-', '/');
+  const marker = '### ' + expectedDate;
   const headings = [...md.matchAll(/^###\s+(20\d{2}\/\d{2}\/\d{2})(?=[ \t]|$)/gm)];
   const target = headings.find(h => h[1] === expectedDate);
   if (!target) throw new Error('No atmovies date heading');
@@ -547,7 +548,7 @@ function selftest() {
     '* [日期隔離測試乙](/movie/testisolationb/)',
     '* 22：35',
     '更新時間:'
-  ].join('\\n');
+  ].join('\n');
   const isolationSource='https://www.atmovies.com.tw/showtime/t02a01/a02/'+today.replaceAll('-','')+'/';
   const beforeIsolation=output.length;
   parseAtmovies(multiDate,isolatedCinema,today,isolationSource);
@@ -561,6 +562,7 @@ function selftest() {
   if (parsedSecond.length!==1 || parsedSecond[0].title!=='日期隔離測試乙' ||
       parsedSecond[0].sourceBusinessDate!==isolatedNext)
     throw new Error('Cross-date contamination: first date recorded under later date');
+  output.splice(beforeIsolation); // Leave subsequent parser fixtures independent.
   // Every cinema must actually attempt +5/+6 day URLs: listing those dates
   // in a landing-page navigation is not sufficient proof of checking them.
   const explicitDay5=addDays(today,5),explicitDay6=addDays(today,6);
