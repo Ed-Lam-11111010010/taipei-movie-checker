@@ -265,10 +265,16 @@ function parseAmbassador(md, cinema, date, url) {
 function parseAtmovies(md, cinema, date, url) {
   const expected = atmoviesFallback[cinema.id] || additionalAtmovies[cinema.id];
   if (!expected || !md.includes(expected[1])) throw new Error('atmovies cinema identity does not match');
-  const marker = '### ' + date.replaceAll('-', '/');
-  const start = md.indexOf(marker);
-  if (start < 0) throw new Error('No atmovies date heading');
-  const section = md.slice(start).split(/更新時間:|## 台北戲院時間查詢/)[0];
+  // A venue page can include multiple dated sections. Restrict parsing to
+  // the requested date only; never attribute the next day's films to today.
+  const expectedDate = date.replaceAll('-', '/');
+  const marker = '### ' + expectedDate;
+  const headings = [...md.matchAll(/^###\s+(20\d{2}\/\d{2}\/\d{2})(?=[ \t]|$)/gm)];
+  const target = headings.find(h => h[1] === expectedDate);
+  if (!target) throw new Error('No atmovies date heading');
+  const next = headings.find(h => h.index > target.index);
+  const section = md.slice(target.index, next ? next.index : md.length)
+    .split(/更新時間:|## 台北戲院時間查詢/)[0];
   let title = '', format = '數位', matched = 0, filmId = '', filmPoster = null;
   for (const raw of section.split('\n')) {
     const line = raw.trim();
@@ -529,6 +535,34 @@ async function run() {
     ' venues; ' + syncedAdditional.length + '/26 added cinemas successfully parsed, ' + checkedAt);
 }
 function selftest() {
+
+  // Regression: one source page listing two dates must not copy the second
+  // day's sessions into the first day (or vice versa).
+  const isolatedNext = addDays(today,1), isolatedCinema={id:'vieshow-xinyi',name:'台北信義威秀'};
+  const multiDate = [
+    isolatedCinema.name,
+    '### '+today.replaceAll('-','/')+' (一)',
+    '* [日期隔離測試甲](/movie/testisolationa/)',
+    '* 10：05',
+    '### '+isolatedNext.replaceAll('-','/')+' (二)',
+    '* [日期隔離測試乙](/movie/testisolationb/)',
+    '* 22：35',
+    '更新時間:'
+  ].join('\n');
+  const isolationSource='https://www.atmovies.com.tw/showtime/t02a01/a02/'+today.replaceAll('-','')+'/';
+  const beforeIsolation=output.length;
+  parseAtmovies(multiDate,isolatedCinema,today,isolationSource);
+  const parsedFirst=output.slice(beforeIsolation);
+  if (parsedFirst.length!==1 || parsedFirst[0].title!=='日期隔離測試甲' ||
+      parsedFirst[0].sourceBusinessDate!==today)
+    throw new Error('Cross-date contamination: later date recorded under first date');
+  parseAtmovies(multiDate,isolatedCinema,isolatedNext,
+    'https://www.atmovies.com.tw/showtime/t02a01/a02/'+isolatedNext.replaceAll('-','')+'/');
+  const parsedSecond=output.slice(beforeIsolation+1);
+  if (parsedSecond.length!==1 || parsedSecond[0].title!=='日期隔離測試乙' ||
+      parsedSecond[0].sourceBusinessDate!==isolatedNext)
+    throw new Error('Cross-date contamination: first date recorded under later date');
+  output.splice(beforeIsolation); // Leave subsequent parser fixtures independent.
   // Every cinema must actually attempt +5/+6 day URLs: listing those dates
   // in a landing-page navigation is not sufficient proof of checking them.
   const explicitDay5=addDays(today,5),explicitDay6=addDays(today,6);
