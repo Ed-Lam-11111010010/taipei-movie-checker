@@ -15,6 +15,7 @@ on:
       - "theater-directory.js"
       - "catalog.json"
       - "scripts/test-pages.cjs"
+      - "scripts/sync-showtimes.cjs"
       - ".github/workflows/test-pages.yml"
 
 permissions:
@@ -38,6 +39,8 @@ jobs:
         with:
           node-version: "22"
       - name: Install browser DOM test dependency
-        run: npm install --no-audit --no-fund --no-save --prefix /tmp/movie-checker-ui-test jsdom@26.1.0
+        run: npm install --no-audit --no-fund --no-save --prefix /tmp/movie-checker-ui-test jsdom@26.1.0 turndown@7.2.0
+      - name: Validate trusted source parsing and advertised future date discovery
+        run: node scripts/sync-showtimes.cjs --self-test
       - name: Exercise Movies, Showtimes, Cinemas and Map
         run: node scripts/test-pages.cjs
