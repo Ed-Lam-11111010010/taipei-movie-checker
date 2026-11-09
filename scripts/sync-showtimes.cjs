@@ -10,6 +10,10 @@ const today = dateFmt.format(new Date());
 const pad = x => String(x).padStart(2, '0');
 const addDays = (key, n) => new Date(Date.parse(key + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 const maximumDate = addDays(today, 30);
+// All seven dates (today through +6) get an explicit source request, whether
+// or not the site's navigation advertises them. Only trustworthy rows publish.
+const LOOKAHEAD_DAYS = 7;
+const SOURCE_FETCH_CONCURRENCY = 4;
 const validTime = /^([01]\d|2[0-3]):[0-5]\d$/;
 const seen = new Set();
 const output = [];
@@ -291,6 +295,24 @@ function parseAtmovies(md, cinema, date, url) {
   }
   if (matched < 1) throw new Error('No trustworthy atmovies rows');
 }
+// Navigation is advisory only: accept future dates from an identity-matched
+// cinema header and validate every requested day with parseAtmovies().
+function advertisedAtmoviesDays(md, cinema) {
+  const expected = atmoviesFallback[cinema.id] || additionalAtmovies[cinema.id];
+  if (!expected || !md.includes(expected[1])) return [];
+  const header = md.split(/^###\s+20\d{2}\/\d{2}\/\d{2}/m)[0];
+  return vieshowDates(header).filter(date => date >= today &&
+    date <= addDays(today, LOOKAHEAD_DAYS - 1));
+}
+function queueAdvertisedAtmoviesDates(urls, md, cinema) {
+  const expected = atmoviesFallback[cinema.id] || additionalAtmovies[cinema.id];
+  if (!expected) return;
+  for (const day of advertisedAtmoviesDays(md, cinema)) {
+    const url = 'https://www.atmovies.com.tw/showtime/' + expected[0] +
+      '/a02/' + day.replaceAll('-', '') + '/';
+    if (!urls.some(candidate => candidate[1] === url)) urls.push([day, url, 'atmovies']);
+  }
+}
 // Read a cinema-specific online ticket portal only from its identity-matched
 // @movies venue page. Never guess a screening ID or accept arbitrary domains.
 function atmoviesTicketPortal(md, cinema) {
@@ -346,9 +368,9 @@ function parseFuzhong(html, cinema, url) {
   if (matched < 1) throw new Error('No safely parsed upcoming Fuzhong sessions');
 }
 
-async function get(url, rawHtml = false) {
+async function get(url, rawHtml = false, timeoutMs = 22000) {
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 22000);
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
   try {
     const response = await fetch(url, { signal: ctl.signal, redirect: 'follow',
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MovieCheckerPersonalPOC/1.0; +https://github.com/Ed-Lam-11111010010/taipei-movie-checker)', 'Accept-Language': 'zh-TW,zh;q=0.9' } });
@@ -357,6 +379,46 @@ async function get(url, rawHtml = false) {
     if (html.length < 1000 || html.length > 8000000) throw new Error('Unexpected HTML length ' + html.length);
     return rawHtml ? html : textMd(html);
   } finally { clearTimeout(timer); }
+}
+function candidateSourceUrls(cinema, newDirectory) {
+  const urls = [];
+  if (newDirectory) {
+    if (cinema.id==='fuzhong15') {
+      urls.push([today,'https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260','fuzhong']);
+    } else {
+      const atmoviesId=additionalAtmovies[cinema.id][0];
+      // The stable venue page often contains today's times when explicit
+      // YYYYMMDD pages do not; parse only if its heading is exactly today.
+      urls.push([today,'https://www.atmovies.com.tw/showtime/'+atmoviesId+'/a02/','atmovies']);
+      // Validate seven explicit dates, including +5 and +6.
+      for (let d=0;d<LOOKAHEAD_DAYS;d++) {
+        const day=addDays(today,d);
+        urls.push([day,'https://www.atmovies.com.tw/showtime/'+atmoviesId+
+          '/a02/'+day.replaceAll('-','')+'/','atmovies']);
+      }
+    }
+  } else if (cinema.id.startsWith('vieshow-')) {
+    urls.push([today, cinema.officialUrl, 'vieshow']);
+    // Official Vieshow often blocks automated access: consult its verified
+    // alternate venue page as well as the seven explicit dates.
+    urls.push([today, 'https://www.atmovies.com.tw/showtime/' +
+      atmoviesFallback[cinema.id][0] + '/a02/', 'atmovies']);
+    for (let d = 0; d < LOOKAHEAD_DAYS; d++) {
+      const day = addDays(today, d);
+      urls.push([day, 'https://www.atmovies.com.tw/showtime/' + atmoviesFallback[cinema.id][0] + '/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
+    }
+  }
+  else if (cinema.id.startsWith('ambassador-')) for (let d=0;d<LOOKAHEAD_DAYS;d++) {
+    const day = addDays(today,d);
+    urls.push([day, cinema.showtimesUrl + '&DT=' + day.replaceAll('-', '%2F'), 'ambassador']);
+  } else if (cinema.id === 'showtime-xinxin') {
+    urls.push([today,'https://www.atmovies.com.tw/showtime/t02d03/a02/','atmovies']);
+    for (let d=0;d<LOOKAHEAD_DAYS;d++) {
+      const day = addDays(today,d);
+      urls.push([day, 'https://www.atmovies.com.tw/showtime/t02d03/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
+    }
+  }
+  return urls;
 }
 async function run() {
   const previous = JSON.parse(fs.readFileSync('catalog.json','utf8'));
@@ -371,51 +433,61 @@ async function run() {
   for (const cinema of allCinemas) {
     const newDirectory = !primaryCinemaIds.has(cinema.id);
     let error = null, dates = [], before = output.length, discoveredTicketPortal = null;
-    const urls = [];
-    if (newDirectory) {
-      if (cinema.id==='fuzhong15') {
-        urls.push([today,'https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260','fuzhong']);
-      } else {
-        const atmoviesId=additionalAtmovies[cinema.id][0];
-        // The stable venue page often contains today's times when explicit
-        // YYYYMMDD pages do not; parse only if its heading is exactly today.
-        urls.push([today,'https://www.atmovies.com.tw/showtime/'+atmoviesId+'/a02/','atmovies']);
-        // In addition check two explicit calendar dates for future sessions.
-        for (let d=0;d<2;d++) {
-          const day=addDays(today,d);
-          urls.push([day,'https://www.atmovies.com.tw/showtime/'+atmoviesId+
-            '/a02/'+day.replaceAll('-','')+'/','atmovies']);
-        }
-      }
-    } else if (cinema.id.startsWith('vieshow-')) {
-      urls.push([today, cinema.officialUrl, 'vieshow']);
-      for (let d = 0; d < 3; d++) {
-        const day = addDays(today, d);
-        urls.push([day, 'https://www.atmovies.com.tw/showtime/' + atmoviesFallback[cinema.id][0] + '/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
+    const urls = candidateSourceUrls(cinema, newDirectory);
+    // One status for each of the next seven days. A source error or an empty
+    // parsed page NEVER means the cinema has no real-world screenings.
+    const checkMap = new Map(Array.from({length:LOOKAHEAD_DAYS},(_,offset)=>
+      [addDays(today,offset),{date:addDays(today,offset),state:'unverified'}]));
+    function noteVerifiedDays() {
+      for (const row of output.slice(before)) {
+        if (checkMap.has(row.sourceBusinessDate))
+          checkMap.set(row.sourceBusinessDate,{date:row.sourceBusinessDate,state:'verified'});
       }
     }
-    else if (cinema.id.startsWith('ambassador-')) for (let d=0;d<3;d++) {
-      const day = addDays(today,d);
-      urls.push([day, cinema.showtimesUrl + '&DT=' + day.replaceAll('-', '%2F'), 'ambassador']);
-    } else if (cinema.id === 'showtime-xinxin') for (let d=0;d<3;d++) {
-      const day = addDays(today,d);
-      urls.push([day, 'https://www.atmovies.com.tw/showtime/t02d03/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
-    }
-    let officialSucceeded = false;
-    for (const [day,url,kind] of urls) {
-      if (kind === 'atmovies' && officialSucceeded) continue;
+    const fetchCandidate = async candidate => {
+      const [day,url,kind]=candidate;
       try {
-        const markdown = await get(url, kind==='fuzhong');
-        if (kind === 'fuzhong') parseFuzhong(markdown,cinema,url);
-        if (kind === 'vieshow') { parseVieshow(markdown, cinema); officialSucceeded = true; }
-        if (kind === 'ambassador') parseAmbassador(markdown, cinema, day, url);
-        if (kind === 'atmovies') {
-          parseAtmovies(markdown, cinema, day, url);
+        const markdown = await get(url,kind==='fuzhong',kind==='fuzhong'||kind==='vieshow'?22000:12000);
+        return {candidate,markdown};
+      } catch (failure) { return {candidate,failure}; }
+    };
+    let officialSucceeded = false;
+    const parseCandidate = result => {
+      const [day,url,kind]=result.candidate;
+      try {
+        if (result.failure) throw result.failure;
+        const markdown = result.markdown;
+        if (kind==='fuzhong') parseFuzhong(markdown,cinema,url);
+        if (kind==='vieshow') { parseVieshow(markdown,cinema); officialSucceeded=true; }
+        if (kind==='ambassador') parseAmbassador(markdown,cinema,day,url);
+        if (kind==='atmovies') {
+          // The seven dated requests are always present; navigation only
+          // confirms dates the upstream site actually advertises.
+          queueAdvertisedAtmoviesDates(urls,markdown,cinema);
+          parseAtmovies(markdown,cinema,day,url);
           if (newDirectory && !discoveredTicketPortal)
-            discoveredTicketPortal = atmoviesTicketPortal(markdown, cinema);
+            discoveredTicketPortal=atmoviesTicketPortal(markdown,cinema);
         }
-      } catch (e) { error = (e instanceof Error ? e.message : String(e)).slice(0, 150); console.warn(cinema.id, day, error); }
+        noteVerifiedDays();
+      } catch (failure) {
+        const message=(failure instanceof Error?failure.message:String(failure)).slice(0,150);
+        error=message;
+        if (result.failure && checkMap.get(day)?.state!=='verified')
+          checkMap.set(day,{date:day,state:'source_error'});
+        console.warn(cinema.id,day,message);
+      }
+    };
+    // Official Vieshow is checked first. Dated fallback requests still run
+    // even when it works, so day +5/+6 cannot be silently skipped.
+    const official = urls.find(candidate=>candidate[2]==='vieshow');
+    if (official) parseCandidate(await fetchCandidate(official));
+    const dated = urls.filter(candidate=>candidate!==official);
+    for (let offset=0;offset<dated.length;offset+=SOURCE_FETCH_CONCURRENCY) {
+      const batch = await Promise.all(dated.slice(offset,offset+SOURCE_FETCH_CONCURRENCY).map(fetchCandidate));
+      for (const result of batch) parseCandidate(result);
     }
+    noteVerifiedDays();
+    const dateChecks=[...checkMap.values()];
     const rows = output.slice(before);
     dates = [...new Set(rows.map(r=>r.sourceBusinessDate))].sort();
     const success = rows.length > 0;
@@ -435,12 +507,15 @@ async function run() {
     sources.push({ cinemaId: cinema.id, sourceUrl: success ? rows[0].sourceUrl : cinema.showtimesUrl,
       state: success ? (error ? 'partial' : 'ok') : 'error',
       lastAttemptAt: checkedAt, lastSuccessAt: success ? checkedAt : null,
-      coverage: dates,
+      coverage: dates, dateChecks,
       message: success ? rows.length + ' 個可解析場次／' + dates.length + ' 個日期' +
+        '；未來7日逐日驗證 '+dateChecks.filter(x=>x.state==='verified').length+'/7 日' +
         (usedFallback ? '；威秀官方來源拒絕自動請求，改用開眼影城頁' : '') +
         (error && !usedFallback ? '；其他頁面讀取失敗' : '') :
         '無法安全解析場次；請前往來源網頁確認' });
-    console.log(cinema.id + ': ' + rows.length + ' screenings, days=' + dates.length);
+    console.log(cinema.id + ': ' + rows.length + ' screenings, verified_dates=' +
+      dateChecks.filter(x=>x.state==='verified').map(x=>x.date).join(',') +
+      ', unverified_dates=' + dateChecks.filter(x=>x.state!=='verified').map(x=>x.date+':'+x.state).join(','));
   }
   if (output.length < 5) throw new Error('No safe publish: too few valid real screenings (' + output.length + ')');
   if (output.length > 15000) throw new Error('Too many screenings: ' + output.length);
@@ -454,6 +529,39 @@ async function run() {
     ' venues; ' + syncedAdditional.length + '/26 added cinemas successfully parsed, ' + checkedAt);
 }
 function selftest() {
+  // Every cinema must actually attempt +5/+6 day URLs: listing those dates
+  // in a landing-page navigation is not sufficient proof of checking them.
+  const explicitDay5=addDays(today,5),explicitDay6=addDays(today,6);
+  for(const c of [
+    {id:'vieshow-xinyi',officialUrl:'https://www.vscinemas.com.tw/theater/detail.aspx?id=1',newDirectory:false},
+    {id:'ambassador-main',showtimesUrl:'https://www.ambassador.com.tw/home/Showtime?ID=84b87b82-b936-4a39-b91f-e88328d33b4e',newDirectory:false},
+    {id:'showtime-xinxin',newDirectory:false},
+    {id:'centuryasia-yonghe',newDirectory:true}
+  ]) {
+    const requests=candidateSourceUrls(c,c.newDirectory);
+    for(const date of [explicitDay5,explicitDay6]){
+      const matches=requests.filter(([day,url,kind])=>day===date &&
+        (kind==='ambassador' ? url.includes('DT='+date.replaceAll('-','%2F')) : url.includes(date.replaceAll('-',''))));
+      if(matches.length!==1)throw Error('Missing unique explicit +5/+6 cinema/day check: '+c.id+' '+date);
+    }
+  }
+  const dayLabel = key => Number(key.slice(5,7)) + '/' + key.slice(8) +
+    ' (' + '日一二三四五六'[new Date(key + 'T00:00:00Z').getUTCDay()] + ')';
+  const day3=addDays(today,3),day6=addDays(today,6),day8=addDays(today,8);
+  const nav=['台北信義威秀','選擇日期：'+[dayLabel(day3),dayLabel(day6),dayLabel(day8)].join(' '),
+    '### '+today.replaceAll('-','/')+' (一)'].join('\n');
+  const options=advertisedAtmoviesDays(nav,{id:'vieshow-xinyi'});
+  if (options.join(',') !== [day3,day6].join(','))
+    throw new Error('Advertised date window must include valid future days up to seven');
+  if (advertisedAtmoviesDays(nav.replace('台北信義威秀','無關影城'),{id:'vieshow-xinyi'}).length)
+    throw new Error('Navigation must match the cinema');
+  const urls=[[today,'https://www.atmovies.com.tw/showtime/t02a01/a02/','atmovies']];
+  queueAdvertisedAtmoviesDates(urls,nav,{id:'vieshow-xinyi'});
+  queueAdvertisedAtmoviesDates(urls,nav,{id:'vieshow-xinyi'});
+  if (urls.length!==3 || !urls.some(r=>r[0]===day3 && r[1].endsWith(day3.replaceAll('-','')+'/')) ||
+      !urls.some(r=>r[0]===day6) || urls.some(r=>r[0]===day8))
+    throw new Error('Advertised date URLs must be identity-matched and deduplicated');
+
   const sampleTicket = '永和喜樂時代影城\\n網路訂票: [www.ezding.com.tw](https://www.ezding.com.tw/cinemabooking?campaign_code=atmovie_cinemapage&channel=atmovie&cinemaid=c072c5c43fc011e9a245782bcb259cad)\\n### 2026/11/04 (三)'.replaceAll('\\n','\n');
   if (atmoviesTicketPortal(sampleTicket, {id:'centuryasia-yonghe'}) !== 'https://www.ezding.com.tw/cinemabooking?campaign_code=atmovie_cinemapage&channel=atmovie&cinemaid=c072c5c43fc011e9a245782bcb259cad')
     throw new Error('Verified cinema-specific ticket link fixture failed');
