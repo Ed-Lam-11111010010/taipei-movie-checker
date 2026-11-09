@@ -10,10 +10,10 @@ const today = dateFmt.format(new Date());
 const pad = x => String(x).padStart(2, '0');
 const addDays = (key, n) => new Date(Date.parse(key + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 const maximumDate = addDays(today, 30);
-// Explicitly check four calendar days. Follow dated options a trusted cinema
-// page advertises beyond that, up to seven days including today.
-const MINIMUM_LOOKAHEAD_DAYS = 4;
-const ADVERTISED_LOOKAHEAD_DAYS = 7;
+// All seven dates (today through +6) get an explicit source request, whether
+// or not the site's navigation advertises them. Only trustworthy rows publish.
+const LOOKAHEAD_DAYS = 7;
+const SOURCE_FETCH_CONCURRENCY = 4;
 const validTime = /^([01]\d|2[0-3]):[0-5]\d$/;
 const seen = new Set();
 const output = [];
@@ -380,6 +380,46 @@ async function get(url, rawHtml = false) {
     return rawHtml ? html : textMd(html);
   } finally { clearTimeout(timer); }
 }
+function candidateSourceUrls(cinema, newDirectory) {
+  const urls = [];
+  if (newDirectory) {
+    if (cinema.id==='fuzhong15') {
+      urls.push([today,'https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260','fuzhong']);
+    } else {
+      const atmoviesId=additionalAtmovies[cinema.id][0];
+      // The stable venue page often contains today's times when explicit
+      // YYYYMMDD pages do not; parse only if its heading is exactly today.
+      urls.push([today,'https://www.atmovies.com.tw/showtime/'+atmoviesId+'/a02/','atmovies']);
+      // Validate seven explicit dates, including +5 and +6.
+      for (let d=0;d<LOOKAHEAD_DAYS;d++) {
+        const day=addDays(today,d);
+        urls.push([day,'https://www.atmovies.com.tw/showtime/'+atmoviesId+
+          '/a02/'+day.replaceAll('-','')+'/','atmovies']);
+      }
+    }
+  } else if (cinema.id.startsWith('vieshow-')) {
+    urls.push([today, cinema.officialUrl, 'vieshow']);
+    // Official Vieshow often blocks automated access: consult its verified
+    // alternate venue page as well as the seven explicit dates.
+    urls.push([today, 'https://www.atmovies.com.tw/showtime/' +
+      atmoviesFallback[cinema.id][0] + '/a02/', 'atmovies']);
+    for (let d = 0; d < LOOKAHEAD_DAYS; d++) {
+      const day = addDays(today, d);
+      urls.push([day, 'https://www.atmovies.com.tw/showtime/' + atmoviesFallback[cinema.id][0] + '/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
+    }
+  }
+  else if (cinema.id.startsWith('ambassador-')) for (let d=0;d<LOOKAHEAD_DAYS;d++) {
+    const day = addDays(today,d);
+    urls.push([day, cinema.showtimesUrl + '&DT=' + day.replaceAll('-', '%2F'), 'ambassador']);
+  } else if (cinema.id === 'showtime-xinxin') {
+    urls.push([today,'https://www.atmovies.com.tw/showtime/t02d03/a02/','atmovies']);
+    for (let d=0;d<LOOKAHEAD_DAYS;d++) {
+      const day = addDays(today,d);
+      urls.push([day, 'https://www.atmovies.com.tw/showtime/t02d03/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
+    }
+  }
+  return urls;
+}
 async function run() {
   const previous = JSON.parse(fs.readFileSync('catalog.json','utf8'));
   if (!Array.isArray(previous.cinemas)) throw new Error('Cinema catalog missing');
@@ -393,43 +433,7 @@ async function run() {
   for (const cinema of allCinemas) {
     const newDirectory = !primaryCinemaIds.has(cinema.id);
     let error = null, dates = [], before = output.length, discoveredTicketPortal = null;
-    const urls = [];
-    if (newDirectory) {
-      if (cinema.id==='fuzhong15') {
-        urls.push([today,'https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260','fuzhong']);
-      } else {
-        const atmoviesId=additionalAtmovies[cinema.id][0];
-        // The stable venue page often contains today's times when explicit
-        // YYYYMMDD pages do not; parse only if its heading is exactly today.
-        urls.push([today,'https://www.atmovies.com.tw/showtime/'+atmoviesId+'/a02/','atmovies']);
-        // Check four days even when the landing page's date navigation is stale.
-        for (let d=0;d<MINIMUM_LOOKAHEAD_DAYS;d++) {
-          const day=addDays(today,d);
-          urls.push([day,'https://www.atmovies.com.tw/showtime/'+atmoviesId+
-            '/a02/'+day.replaceAll('-','')+'/','atmovies']);
-        }
-      }
-    } else if (cinema.id.startsWith('vieshow-')) {
-      urls.push([today, cinema.officialUrl, 'vieshow']);
-      // Official Vieshow often blocks automated access: consult its verified
-      // alternate venue page for dates extending beyond the four-day baseline.
-      urls.push([today, 'https://www.atmovies.com.tw/showtime/' +
-        atmoviesFallback[cinema.id][0] + '/a02/', 'atmovies']);
-      for (let d = 0; d < MINIMUM_LOOKAHEAD_DAYS; d++) {
-        const day = addDays(today, d);
-        urls.push([day, 'https://www.atmovies.com.tw/showtime/' + atmoviesFallback[cinema.id][0] + '/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
-      }
-    }
-    else if (cinema.id.startsWith('ambassador-')) for (let d=0;d<ADVERTISED_LOOKAHEAD_DAYS;d++) {
-      const day = addDays(today,d);
-      urls.push([day, cinema.showtimesUrl + '&DT=' + day.replaceAll('-', '%2F'), 'ambassador']);
-    } else if (cinema.id === 'showtime-xinxin') {
-      urls.push([today,'https://www.atmovies.com.tw/showtime/t02d03/a02/','atmovies']);
-      for (let d=0;d<MINIMUM_LOOKAHEAD_DAYS;d++) {
-        const day = addDays(today,d);
-        urls.push([day, 'https://www.atmovies.com.tw/showtime/t02d03/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
-      }
-    }
+    const urls = candidateSourceUrls(cinema, newDirectory);
     let officialSucceeded = false;
     for (const [day,url,kind] of urls) {
       if (kind === 'atmovies' && officialSucceeded) continue;
