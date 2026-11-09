@@ -10,6 +10,10 @@ const today = dateFmt.format(new Date());
 const pad = x => String(x).padStart(2, '0');
 const addDays = (key, n) => new Date(Date.parse(key + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
 const maximumDate = addDays(today, 30);
+// Explicitly check four calendar days. Follow dated options a trusted cinema
+// page advertises beyond that, up to seven days including today.
+const MINIMUM_LOOKAHEAD_DAYS = 4;
+const ADVERTISED_LOOKAHEAD_DAYS = 7;
 const validTime = /^([01]\d|2[0-3]):[0-5]\d$/;
 const seen = new Set();
 const output = [];
@@ -291,6 +295,24 @@ function parseAtmovies(md, cinema, date, url) {
   }
   if (matched < 1) throw new Error('No trustworthy atmovies rows');
 }
+// Navigation is advisory only: accept future dates from an identity-matched
+// cinema header and validate every requested day with parseAtmovies().
+function advertisedAtmoviesDays(md, cinema) {
+  const expected = atmoviesFallback[cinema.id] || additionalAtmovies[cinema.id];
+  if (!expected || !md.includes(expected[1])) return [];
+  const header = md.split(/^###\s+20\d{2}\/\d{2}\/\d{2}/m)[0];
+  return vieshowDates(header).filter(date => date >= today &&
+    date <= addDays(today, ADVERTISED_LOOKAHEAD_DAYS - 1));
+}
+function queueAdvertisedAtmoviesDates(urls, md, cinema) {
+  const expected = atmoviesFallback[cinema.id] || additionalAtmovies[cinema.id];
+  if (!expected) return;
+  for (const day of advertisedAtmoviesDays(md, cinema)) {
+    const url = 'https://www.atmovies.com.tw/showtime/' + expected[0] +
+      '/a02/' + day.replaceAll('-', '') + '/';
+    if (!urls.some(candidate => candidate[1] === url)) urls.push([day, url, 'atmovies']);
+  }
+}
 // Read a cinema-specific online ticket portal only from its identity-matched
 // @movies venue page. Never guess a screening ID or accept arbitrary domains.
 function atmoviesTicketPortal(md, cinema) {
@@ -380,8 +402,8 @@ async function run() {
         // The stable venue page often contains today's times when explicit
         // YYYYMMDD pages do not; parse only if its heading is exactly today.
         urls.push([today,'https://www.atmovies.com.tw/showtime/'+atmoviesId+'/a02/','atmovies']);
-        // In addition check two explicit calendar dates for future sessions.
-        for (let d=0;d<2;d++) {
+        // Check four days even when the landing page's date navigation is stale.
+        for (let d=0;d<MINIMUM_LOOKAHEAD_DAYS;d++) {
           const day=addDays(today,d);
           urls.push([day,'https://www.atmovies.com.tw/showtime/'+atmoviesId+
             '/a02/'+day.replaceAll('-','')+'/','atmovies']);
@@ -389,17 +411,24 @@ async function run() {
       }
     } else if (cinema.id.startsWith('vieshow-')) {
       urls.push([today, cinema.officialUrl, 'vieshow']);
-      for (let d = 0; d < 3; d++) {
+      // Official Vieshow often blocks automated access: consult its verified
+      // alternate venue page for dates extending beyond the four-day baseline.
+      urls.push([today, 'https://www.atmovies.com.tw/showtime/' +
+        atmoviesFallback[cinema.id][0] + '/a02/', 'atmovies']);
+      for (let d = 0; d < MINIMUM_LOOKAHEAD_DAYS; d++) {
         const day = addDays(today, d);
         urls.push([day, 'https://www.atmovies.com.tw/showtime/' + atmoviesFallback[cinema.id][0] + '/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
       }
     }
-    else if (cinema.id.startsWith('ambassador-')) for (let d=0;d<3;d++) {
+    else if (cinema.id.startsWith('ambassador-')) for (let d=0;d<ADVERTISED_LOOKAHEAD_DAYS;d++) {
       const day = addDays(today,d);
       urls.push([day, cinema.showtimesUrl + '&DT=' + day.replaceAll('-', '%2F'), 'ambassador']);
-    } else if (cinema.id === 'showtime-xinxin') for (let d=0;d<3;d++) {
-      const day = addDays(today,d);
-      urls.push([day, 'https://www.atmovies.com.tw/showtime/t02d03/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
+    } else if (cinema.id === 'showtime-xinxin') {
+      urls.push([today,'https://www.atmovies.com.tw/showtime/t02d03/a02/','atmovies']);
+      for (let d=0;d<MINIMUM_LOOKAHEAD_DAYS;d++) {
+        const day = addDays(today,d);
+        urls.push([day, 'https://www.atmovies.com.tw/showtime/t02d03/a02/' + day.replaceAll('-', '') + '/', 'atmovies']);
+      }
     }
     let officialSucceeded = false;
     for (const [day,url,kind] of urls) {
@@ -410,6 +439,9 @@ async function run() {
         if (kind === 'vieshow') { parseVieshow(markdown, cinema); officialSucceeded = true; }
         if (kind === 'ambassador') parseAmbassador(markdown, cinema, day, url);
         if (kind === 'atmovies') {
+          // A landing page can advertise Nov 12 even when its own current-day
+          // heading is outdated. Discover dates before validating its sessions.
+          queueAdvertisedAtmoviesDates(urls, markdown, cinema);
           parseAtmovies(markdown, cinema, day, url);
           if (newDirectory && !discoveredTicketPortal)
             discoveredTicketPortal = atmoviesTicketPortal(markdown, cinema);
@@ -454,6 +486,23 @@ async function run() {
     ' venues; ' + syncedAdditional.length + '/26 added cinemas successfully parsed, ' + checkedAt);
 }
 function selftest() {
+  const dayLabel = key => Number(key.slice(5,7)) + '/' + key.slice(8) +
+    ' (' + '日一二三四五六'[new Date(key + 'T00:00:00Z').getUTCDay()] + ')';
+  const day3=addDays(today,3),day6=addDays(today,6),day8=addDays(today,8);
+  const nav=['台北信義威秀','選擇日期：'+[dayLabel(day3),dayLabel(day6),dayLabel(day8)].join(' '),
+    '### '+today.replaceAll('-','/')+' (一)'].join('\n');
+  const options=advertisedAtmoviesDays(nav,{id:'vieshow-xinyi'});
+  if (options.join(',') !== [day3,day6].join(','))
+    throw new Error('Advertised date window must include valid future days up to seven');
+  if (advertisedAtmoviesDays(nav.replace('台北信義威秀','無關影城'),{id:'vieshow-xinyi'}).length)
+    throw new Error('Navigation must match the cinema');
+  const urls=[[today,'https://www.atmovies.com.tw/showtime/t02a01/a02/','atmovies']];
+  queueAdvertisedAtmoviesDates(urls,nav,{id:'vieshow-xinyi'});
+  queueAdvertisedAtmoviesDates(urls,nav,{id:'vieshow-xinyi'});
+  if (urls.length!==3 || !urls.some(r=>r[0]===day3 && r[1].endsWith(day3.replaceAll('-','')+'/')) ||
+      !urls.some(r=>r[0]===day6) || urls.some(r=>r[0]===day8))
+    throw new Error('Advertised date URLs must be identity-matched and deduplicated');
+
   const sampleTicket = '永和喜樂時代影城\\n網路訂票: [www.ezding.com.tw](https://www.ezding.com.tw/cinemabooking?campaign_code=atmovie_cinemapage&channel=atmovie&cinemaid=c072c5c43fc011e9a245782bcb259cad)\\n### 2026/11/04 (三)'.replaceAll('\\n','\n');
   if (atmoviesTicketPortal(sampleTicket, {id:'centuryasia-yonghe'}) !== 'https://www.ezding.com.tw/cinemabooking?campaign_code=atmovie_cinemapage&channel=atmovie&cinemaid=c072c5c43fc011e9a245782bcb259cad')
     throw new Error('Verified cinema-specific ticket link fixture failed');
