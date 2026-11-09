@@ -368,9 +368,9 @@ function parseFuzhong(html, cinema, url) {
   if (matched < 1) throw new Error('No safely parsed upcoming Fuzhong sessions');
 }
 
-async function get(url, rawHtml = false) {
+async function get(url, rawHtml = false, timeoutMs = 22000) {
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 22000);
+  const timer = setTimeout(() => ctl.abort(), timeoutMs);
   try {
     const response = await fetch(url, { signal: ctl.signal, redirect: 'follow',
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MovieCheckerPersonalPOC/1.0; +https://github.com/Ed-Lam-11111010010/taipei-movie-checker)', 'Accept-Language': 'zh-TW,zh;q=0.9' } });
@@ -434,24 +434,60 @@ async function run() {
     const newDirectory = !primaryCinemaIds.has(cinema.id);
     let error = null, dates = [], before = output.length, discoveredTicketPortal = null;
     const urls = candidateSourceUrls(cinema, newDirectory);
-    let officialSucceeded = false;
-    for (const [day,url,kind] of urls) {
-      if (kind === 'atmovies' && officialSucceeded) continue;
-      try {
-        const markdown = await get(url, kind==='fuzhong');
-        if (kind === 'fuzhong') parseFuzhong(markdown,cinema,url);
-        if (kind === 'vieshow') { parseVieshow(markdown, cinema); officialSucceeded = true; }
-        if (kind === 'ambassador') parseAmbassador(markdown, cinema, day, url);
-        if (kind === 'atmovies') {
-          // A landing page can advertise Nov 12 even when its own current-day
-          // heading is outdated. Discover dates before validating its sessions.
-          queueAdvertisedAtmoviesDates(urls, markdown, cinema);
-          parseAtmovies(markdown, cinema, day, url);
-          if (newDirectory && !discoveredTicketPortal)
-            discoveredTicketPortal = atmoviesTicketPortal(markdown, cinema);
-        }
-      } catch (e) { error = (e instanceof Error ? e.message : String(e)).slice(0, 150); console.warn(cinema.id, day, error); }
+    // One status for each of the next seven days. A source error or an empty
+    // parsed page NEVER means the cinema has no real-world screenings.
+    const checkMap = new Map(Array.from({length:LOOKAHEAD_DAYS},(_,offset)=>
+      [addDays(today,offset),{date:addDays(today,offset),state:'unverified'}]));
+    function noteVerifiedDays() {
+      for (const row of output.slice(before)) {
+        if (checkMap.has(row.sourceBusinessDate))
+          checkMap.set(row.sourceBusinessDate,{date:row.sourceBusinessDate,state:'verified'});
+      }
     }
+    const fetchCandidate = async candidate => {
+      const [day,url,kind]=candidate;
+      try {
+        const markdown = await get(url,kind==='fuzhong',kind==='fuzhong'||kind==='vieshow'?22000:12000);
+        return {candidate,markdown};
+      } catch (failure) { return {candidate,failure}; }
+    };
+    let officialSucceeded = false;
+    const parseCandidate = result => {
+      const [day,url,kind]=result.candidate;
+      try {
+        if (result.failure) throw result.failure;
+        const markdown = result.markdown;
+        if (kind==='fuzhong') parseFuzhong(markdown,cinema,url);
+        if (kind==='vieshow') { parseVieshow(markdown,cinema); officialSucceeded=true; }
+        if (kind==='ambassador') parseAmbassador(markdown,cinema,day,url);
+        if (kind==='atmovies') {
+          // The seven dated requests are always present; navigation only
+          // confirms dates the upstream site actually advertises.
+          queueAdvertisedAtmoviesDates(urls,markdown,cinema);
+          parseAtmovies(markdown,cinema,day,url);
+          if (newDirectory && !discoveredTicketPortal)
+            discoveredTicketPortal=atmoviesTicketPortal(markdown,cinema);
+        }
+        noteVerifiedDays();
+      } catch (failure) {
+        const message=(failure instanceof Error?failure.message:String(failure)).slice(0,150);
+        error=message;
+        if (result.failure && checkMap.get(day)?.state!=='verified')
+          checkMap.set(day,{date:day,state:'source_error'});
+        console.warn(cinema.id,day,message);
+      }
+    };
+    // Official Vieshow is checked first. Dated fallback requests still run
+    // even when it works, so day +5/+6 cannot be silently skipped.
+    const official = urls.find(candidate=>candidate[2]==='vieshow');
+    if (official) parseCandidate(await fetchCandidate(official));
+    const dated = urls.filter(candidate=>candidate!==official);
+    for (let offset=0;offset<dated.length;offset+=SOURCE_FETCH_CONCURRENCY) {
+      const batch = await Promise.all(dated.slice(offset,offset+SOURCE_FETCH_CONCURRENCY).map(fetchCandidate));
+      for (const result of batch) parseCandidate(result);
+    }
+    noteVerifiedDays();
+    const dateChecks=[...checkMap.values()];
     const rows = output.slice(before);
     dates = [...new Set(rows.map(r=>r.sourceBusinessDate))].sort();
     const success = rows.length > 0;
@@ -471,12 +507,15 @@ async function run() {
     sources.push({ cinemaId: cinema.id, sourceUrl: success ? rows[0].sourceUrl : cinema.showtimesUrl,
       state: success ? (error ? 'partial' : 'ok') : 'error',
       lastAttemptAt: checkedAt, lastSuccessAt: success ? checkedAt : null,
-      coverage: dates,
+      coverage: dates, dateChecks,
       message: success ? rows.length + ' 個可解析場次／' + dates.length + ' 個日期' +
+        '；未來7日逐日驗證 '+dateChecks.filter(x=>x.state==='verified').length+'/7 日' +
         (usedFallback ? '；威秀官方來源拒絕自動請求，改用開眼影城頁' : '') +
         (error && !usedFallback ? '；其他頁面讀取失敗' : '') :
         '無法安全解析場次；請前往來源網頁確認' });
-    console.log(cinema.id + ': ' + rows.length + ' screenings, days=' + dates.length);
+    console.log(cinema.id + ': ' + rows.length + ' screenings, verified_dates=' +
+      dateChecks.filter(x=>x.state==='verified').map(x=>x.date).join(',') +
+      ', unverified_dates=' + dateChecks.filter(x=>x.state!=='verified').map(x=>x.date+':'+x.state).join(','));
   }
   if (output.length < 5) throw new Error('No safe publish: too few valid real screenings (' + output.length + ')');
   if (output.length > 15000) throw new Error('Too many screenings: ' + output.length);
@@ -490,6 +529,22 @@ async function run() {
     ' venues; ' + syncedAdditional.length + '/26 added cinemas successfully parsed, ' + checkedAt);
 }
 function selftest() {
+  // Every cinema must actually attempt +5/+6 day URLs: listing those dates
+  // in a landing-page navigation is not sufficient proof of checking them.
+  const explicitDay5=addDays(today,5),explicitDay6=addDays(today,6);
+  for(const c of [
+    {id:'vieshow-xinyi',officialUrl:'https://www.vscinemas.com.tw/theater/detail.aspx?id=1',newDirectory:false},
+    {id:'ambassador-main',showtimesUrl:'https://www.ambassador.com.tw/home/Showtime?ID=84b87b82-b936-4a39-b91f-e88328d33b4e',newDirectory:false},
+    {id:'showtime-xinxin',newDirectory:false},
+    {id:'centuryasia-yonghe',newDirectory:true}
+  ]) {
+    const requests=candidateSourceUrls(c,c.newDirectory);
+    for(const date of [explicitDay5,explicitDay6]){
+      const matches=requests.filter(([day,url,kind])=>day===date &&
+        (kind==='ambassador' ? url.includes('DT='+date.replaceAll('-','%2F')) : url.includes(date.replaceAll('-',''))));
+      if(matches.length!==1)throw Error('Missing unique explicit +5/+6 cinema/day check: '+c.id+' '+date);
+    }
+  }
   const dayLabel = key => Number(key.slice(5,7)) + '/' + key.slice(8) +
     ' (' + '日一二三四五六'[new Date(key + 'T00:00:00Z').getUTCDay()] + ')';
   const day3=addDays(today,3),day6=addDays(today,6),day8=addDays(today,8);
