@@ -189,6 +189,31 @@ async function test() {
     await waitFor(() => !document.getElementById('film-detail').classList.contains('hidden'));
     assert.ok(document.querySelector('#film-detail .film-date-tabs'));
     assert.ok(document.querySelector('#film-detail .film-ticket'));
+    const movieVenues=[...document.querySelectorAll('#film-detail .film-venue')];
+    assert.ok(movieVenues.length,'movie details include cinema locations');
+    for(const venue of movieVenues){
+      const cinemaName=venue.querySelector('.film-venue-head h4').textContent.trim();
+      const knownCinema=catalog.cinemas.find(c=>c.name===cinemaName);
+      assert.ok(knownCinema,'movie detail venue maps to an actual cinema');
+      for(const session of venue.querySelectorAll('.film-session')){
+        const actions=session.querySelector('.film-session-actions');
+        const mapAction=actions.querySelector('a.film-location');
+        assert.equal(actions.querySelector('a'),mapAction,'location is the first action for each showtime');
+        assert.match(mapAction.textContent,/查看影城位置/,'first action names cinema location');
+        const mapUrl=new URL(mapAction.href);
+        assert.equal(mapUrl.origin,'https://www.google.com','location points to Google Maps');
+        assert.equal(mapUrl.pathname,'/maps/search/','Google Maps search link is used');
+        assert.equal(mapUrl.searchParams.get('api'),'1');
+        assert.equal(mapUrl.searchParams.get('query'),cinemaName+' '+knownCinema.address,
+          'Google Maps link searches the correct cinema name and street address');
+        assert.equal(mapAction.target,'_blank');
+        assert.ok(mapAction.rel.includes('noopener'),'location link opens safely');
+        assert.ok(actions.querySelector('.film-ticket'),'existing booking link is preserved');
+        const source=actions.querySelector('.film-source-reference');
+        assert.ok(source,'validated showtime sources remain accessible');
+        assert.equal(new URL(source.href).protocol,'https:');
+      }
+    }
     assert.ok(document.getElementById('page-data-summary').textContent.includes('筆'), 'movie page shows data freshness');
     assert.equal(document.body.dataset.page,'movies');
     console.log('PASS Movies:',films.length,'film tiles; shareable route',route);

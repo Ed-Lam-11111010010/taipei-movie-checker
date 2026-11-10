@@ -106,10 +106,11 @@
       '<span>'+esc(row.format)+'</span>'+
       '<span class="film-session-price" title="'+esc(price.note)+'">'+esc(price.value)+'</span></div>'+
       '<div class="film-session-actions">'+
-      (source?'<a href="'+esc(source)+'" target="_blank" rel="noopener noreferrer">核對來源 ↗</a>':'')+
+      '<a class="film-location" href="'+esc(mapsSearch(cinema))+'" target="_blank" rel="noopener noreferrer" aria-label="在 Google Maps 查看'+esc(cinema.name)+'的位置">⌖ 查看影城位置 ↗</a>'+
       (ticket?'<a class="film-ticket" href="'+esc(ticket.url)+'" target="_blank" rel="noopener noreferrer" title="'+
         esc(ticket.direct?'來源提供已驗證場次連結':ticket.infoOnly?'請在來源頁核對場次或購票方式，不保證線上售票':'需在訂票平台重新選擇電影、日期和時間')+'">'+
         esc(ticket.label)+'</a>':'<span>請至影城查詢購票方式</span>')+
+      (source?'<a class="film-source-reference" href="'+esc(source)+'" target="_blank" rel="noopener noreferrer" title="核對這一場的原始場次來源">場次來源 ↗</a>':'')+
       '</div></div>';
   }
   function venueSection(cinema, rows) {
