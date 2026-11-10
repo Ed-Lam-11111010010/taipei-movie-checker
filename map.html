@@ -89,6 +89,12 @@
           <div class="filter-controls">
             <details class="movie-picker" id="movie-picker"><summary>選擇電影（可多選）<span id="movie-selection-status">全部電影／版本</span></summary><div class="movie-picker-body"><button class="movie-clear" id="movie-clear" type="button">取消電影勾選</button><p class="movie-picker-note">列出已取得資料中所有日期、影城與版本的電影。勾選後跨日期顯示該電影的未開演場次；取消勾選後恢復按日期查看。下列數量為符合其他篩選的跨日期場次數。</p><div class="movie-options" id="movie-options" role="group" aria-label="選擇電影與版本"></div></div></details>
             <label class="field query-field"><span>搜尋影城或地點</span><input id="query" type="search" placeholder="影城名稱、行政區或地址" autocomplete="off"></label>
+            <div class="nearest-cinema-control" id="nearest-cinema-control">
+              <button type="button" id="find-nearest-cinema" class="nearest-cinema-button">⌖ 依我的位置找最近影城</button>
+              <button type="button" id="clear-nearest-cinema" class="nearest-cinema-reset hidden">取消距離排序</button>
+              <p id="nearest-cinema-status" role="status" aria-live="polite">點擊後才會要求定位授權；距離為直線估算，並非交通時間。</p>
+              <a id="nearest-external-map" class="nearest-external-map hidden" target="_blank" rel="noopener noreferrer">在 Google Maps 查看附近影城 ↗</a>
+            </div>
             <details class="directory-filter-disclosure" id="directory-filter-disclosure" open><summary>更多篩選<span>依行政區或影城縮小名錄</span></summary><div class="directory-filter-options"><label class="field"><span>行政區</span><select id="district"><option value="">全部行政區</option></select></label><label class="field"><span>影城</span><select id="cinema"><option value="">全部追蹤影城</option></select></label></div></details>
             <label class="field format-field"><span>放映版本</span><select id="format"><option value="">全部版本</option></select></label>
           </div>
