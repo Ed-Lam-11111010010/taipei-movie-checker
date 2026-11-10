@@ -115,9 +115,9 @@
   function venueSection(cinema, rows) {
     const guide=cinema.priceGuide||{};
     const priceUrl=sourceLink(guide.sourceUrl);
-    return '<article class="film-venue"><header class="film-venue-head"><div><h4>'+esc(cinema.name)+
-      '</h4><p>'+esc(cinema.district)+' · '+rows.length+' 場</p>'+
-      '<a class="film-location" href="'+esc(mapsSearch(cinema))+'" target="_blank" rel="noopener noreferrer" aria-label="在 Google Maps 查看'+esc(cinema.name)+'的位置">⌖ 查看影城位置 ↗</a></div>'+
+    return '<article class="film-venue"><header class="film-venue-head"><div class="film-venue-main"><div class="film-venue-name-row"><h4>'+esc(cinema.name)+
+      '</h4><a class="film-location" href="'+esc(mapsSearch(cinema))+'" target="_blank" rel="noopener noreferrer" aria-label="在 Google Maps 查看'+esc(cinema.name)+'的位置">⌖ 查看影城位置 ↗</a></div>'+
+      '<p>'+esc(cinema.district)+' · '+rows.length+' 場</p></div>'+
       '<div class="film-venue-guide">'+
       (priceUrl?'<a href="'+esc(priceUrl)+'" target="_blank" rel="noopener noreferrer">'+
         (guide.source==='official'?'影城票價公告 ↗':'第三方票價參考 ↗')+'</a>':'')+

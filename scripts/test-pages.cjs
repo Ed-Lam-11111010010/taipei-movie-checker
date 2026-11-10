@@ -197,8 +197,16 @@ async function test() {
       assert.ok(knownCinema,'movie detail venue maps to an actual cinema');
       const locationLinks=venue.querySelectorAll('a.film-location');
       assert.equal(locationLinks.length,1,'one cinema location link per venue, regardless of showtime count');
-      const mapAction=venue.querySelector('.film-venue-head .film-location');
-      assert.equal(locationLinks[0],mapAction,'the one location link belongs to the cinema header');
+      const nameRow=venue.querySelector('.film-venue-head .film-venue-main .film-venue-name-row');
+      assert.ok(nameRow,'cinema title and map link use one shared row');
+      assert.equal(movies.window.getComputedStyle(nameRow).display,'flex','cinema title row is inline flex layout');
+      assert.equal(nameRow.children.length,2,'title row holds exactly the cinema name and location link');
+      assert.equal(nameRow.children[0].tagName,'H4','cinema title is leftmost');
+      const mapAction=nameRow.querySelector('a.film-location');
+      assert.equal(nameRow.children[1],mapAction,'location link is rightmost beside cinema title');
+      assert.equal(locationLinks[0],mapAction,'the only venue link is in the title row');
+      assert.equal(movies.window.getComputedStyle(mapAction).minHeight,'44px','map action remains touch-friendly');
+      assert.ok(venue.querySelector('.film-venue-main > p'),'district and showtime count remain below the title row');
       assert.match(mapAction.textContent,/查看影城位置/,'cinema-level action identifies map');
       const mapUrl=new URL(mapAction.href);
       assert.equal(mapUrl.origin,'https://www.google.com','location points to Google Maps');
