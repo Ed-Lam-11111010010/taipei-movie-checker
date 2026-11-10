@@ -364,3 +364,14 @@
   .demo-banner{padding:9px 11px;}
   .page-map .layout{flex-direction:column-reverse;}
 }
+
+
+/* User-initiated nearest cinema; no geolocation prompt during page load. */
+.page-map .nearest-cinema-control{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:5px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--card);}
+.page-map .nearest-cinema-button{flex:1 1 165px;min-height:44px;padding:9px 12px;background:var(--ink);color:#fff;border:1px solid var(--ink);border-radius:7px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+.page-map .nearest-cinema-button:disabled{opacity:.65;cursor:wait;}
+.page-map .nearest-cinema-reset{min-height:44px;padding:9px 10px;border:1px solid var(--line);border-radius:7px;background:transparent;font:inherit;font-size:12px;cursor:pointer;}
+.page-map .nearest-cinema-status{flex:1 0 100%;margin:0;color:var(--muted);font-size:11px;line-height:1.6;}
+.page-map .nearest-external-map{font-size:11px;color:var(--ink);text-underline-offset:3px;}
+.page-map .nearest-cinema-button:focus-visible,.page-map .nearest-cinema-reset:focus-visible{outline:3px solid var(--purple);outline-offset:2px;}
+@media(max-width:620px){.page-map .nearest-cinema-control{padding:10px;}.page-map .nearest-cinema-button{flex-basis:100%;}.page-map .nearest-cinema-reset{flex:1 1 100%;}}
