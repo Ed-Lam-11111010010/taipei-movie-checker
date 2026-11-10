@@ -58,9 +58,21 @@ async function loadPage(name) {
         static now() { return clock; }
       };
       win.fetch = async resource => {
+        if (typeof resource === 'string' && resource.startsWith('https://geocode.arcgis.com/')) {
+          const address = new URL(resource).searchParams.get('SingleLine') || '';
+          const location = address.includes('松壽路20號') ? {x:121.56725, y:25.03558}
+            : address.includes('松仁路58號') ? {x:121.5688, y:25.0369}
+            : {x:121.52, y:25.12};
+          return {ok:true, json:async () => ({candidates:[{score:96,location}]})};
+        }
         assert.equal(resource, './catalog.json');
         return {ok: true, json: async () => catalog};
       };
+      Object.defineProperty(win.navigator, 'geolocation', {configurable:true, value:{
+        getCurrentPosition(success) {
+          success({coords:{latitude:25.03558,longitude:121.56725,accuracy:50}});
+        }
+      }});
       win.HTMLElement.prototype.scrollIntoView = function() {};
       if (typeof win.AbortSignal.timeout !== 'function') win.AbortSignal.timeout = () => undefined;
     }
@@ -343,6 +355,25 @@ async function test() {
       connectedButton.click();
       assert.ok(document.getElementById('map-showtimes').href.includes('showtimes.html?cinema='));
     }
+    const nearButton=document.getElementById('find-nearest-cinema');
+    assert.ok(nearButton && !nearButton.disabled,'nearby action is available without prompting on page load');
+    assert.ok(!document.getElementById('nearest-external-map').hasAttribute('href'),'visitor location is not exposed before consent');
+    nearButton.click();
+    await waitFor(() => document.getElementById('nearest-cinema-status').textContent.includes('已依位置排序'));
+    const first=document.querySelector('#map-place-list .map-place');
+    assert.equal(first.dataset.cinemaId,'vieshow-xinyi','nearest cinema uses actual coordinates, not alphabetic order');
+    assert.match(first.textContent,/約 0.0 公里（直線）/,'nearby cinema shows straight-line distance');
+    assert.equal(document.getElementById('map-selected-name').textContent,'台北信義威秀影城','nearest cinema becomes selected map destination');
+    assert.ok(document.getElementById('nearest-external-map').href.includes('/@25.03558,121.56725,14z'),'external map is opt-in and centered near visitor');
+    document.getElementById('clear-nearest-cinema').click();
+    assert.ok(!document.getElementById('map-place-list').textContent.includes('公里（直線）'),'clear disables distance sorting');
+    assert.ok(!document.getElementById('nearest-external-map').hasAttribute('href'),'reset clears the location link');
+    Object.defineProperty(map.window.navigator,'geolocation',{configurable:true,value:{
+      getCurrentPosition(success,error){ error({code:1}); }
+    }});
+    nearButton.click();
+    assert.match(document.getElementById('nearest-cinema-status').textContent,/已拒絕定位授權/,'permission denied has usable fallback');
+    assert.equal(document.querySelectorAll('#map-place-list .map-place').length,38,'permission denial retains full cinema directory');
         console.log('PASS Map: 38 map destinations with coverage labels and showtime links');
   } finally { map.window.close(); }
 }
