@@ -87,6 +87,132 @@
     const formatSelect = $('#format');
     const sortSelect = $('#sort-order');
 
+    // Visitor location is held only in memory. Cinema address lookups do not include
+    // visitor coordinates; the external Maps link shares a location only if clicked.
+    const nearestButton = $('#find-nearest-cinema');
+    const nearestReset = $('#clear-nearest-cinema');
+    const nearestStatus = $('#nearest-cinema-status');
+    const nearestExternalMap = $('#nearest-external-map');
+    const cinemaCoordinates = new Map();
+    let visitorCoordinates = null;
+    let distanceSortActive = false;
+    let nearestRequest = 0;
+    const radians = value => value * Math.PI / 180;
+    function distanceKm(a, b) {
+      if (!a || !b) return Infinity;
+      const latDelta = radians(b.latitude - a.latitude);
+      const lonDelta = radians(b.longitude - a.longitude);
+      const h = Math.sin(latDelta / 2) ** 2 +
+        Math.cos(radians(a.latitude)) * Math.cos(radians(b.latitude)) * Math.sin(lonDelta / 2) ** 2;
+      return 12742 * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+    function distanceToCinema(cinema) {
+      return distanceKm(visitorCoordinates, cinemaCoordinates.get(cinema.id));
+    }
+    async function geocodeCinema(cinema) {
+      // One address per user-initiated request. No API key, no stored geocode data.
+      // Reject weak or outside-Taipei matches instead of inventing a location.
+      const address = cinema.address.replace(/[（(].*$/, '').replace(/\d+\s*[Ff樓層].*$/, '').trim();
+      const url = new URL('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates');
+      url.searchParams.set('SingleLine', address + ', Taiwan');
+      url.searchParams.set('f', 'json');
+      url.searchParams.set('outSR', '4326');
+      url.searchParams.set('forStorage', 'false');
+      url.searchParams.set('maxLocations', '1');
+      const response = await fetch(url.href, {credentials:'omit', mode:'cors', signal: AbortSignal.timeout(8000)});
+      if (!response.ok) throw new Error('地址服務無法連線');
+      const candidate = (await response.json())?.candidates?.[0];
+      const latitude = Number(candidate?.location?.y);
+      const longitude = Number(candidate?.location?.x);
+      if (!(candidate?.score >= 85 && Number.isFinite(latitude) && Number.isFinite(longitude) &&
+            latitude >= 24.8 && latitude <= 25.3 && longitude >= 121.3 && longitude <= 121.8)) return null;
+      return {latitude, longitude};
+    }
+    async function locateCinemaAddresses(requestId) {
+      const missing = cinemas.filter(cinema => !cinemaCoordinates.has(cinema.id));
+      let index = 0;
+      let failed = 0, found = 0;
+      // Limit parallel requests; abandon quickly if the public geocoder is unavailable.
+      const worker = async () => {
+        while (index < missing.length && requestId === nearestRequest) {
+          if (failed >= 4 && found === 0) break;
+          const cinema = missing[index++];
+          try {
+            const coordinates = await geocodeCinema(cinema);
+            if (requestId !== nearestRequest) return;
+            if (coordinates) { cinemaCoordinates.set(cinema.id, coordinates); found++; }
+            else failed++;
+          } catch { failed++; }
+        }
+      };
+      await Promise.all(Array.from({length: Math.min(4, missing.length)}, worker));
+    }
+    function clearNearestCinema() {
+      nearestRequest++;
+      visitorCoordinates = null;
+      distanceSortActive = false;
+      if (!nearestButton) return;
+      nearestButton.disabled = false;
+      nearestReset.classList.add('hidden');
+      nearestExternalMap.classList.add('hidden');
+      nearestExternalMap.removeAttribute('href');
+      nearestStatus.textContent = '點擊後才會要求定位授權；距離為直線估算，並非交通時間。';
+    }
+    if (nearestButton) {
+      nearestButton.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+          nearestStatus.textContent = '此瀏覽器不支援定位；仍可使用行政區及影城搜尋。';
+          return;
+        }
+        const requestId = ++nearestRequest;
+        nearestButton.disabled = true;
+        nearestStatus.textContent = '正在要求定位授權…';
+        const errorMessage = error => {
+          if (requestId !== nearestRequest) return;
+          nearestButton.disabled = false;
+          nearestStatus.textContent = error?.code === 1
+            ? '已拒絕定位授權，影城搜尋及地圖仍可正常使用。'
+            : '目前無法取得位置；請檢查裝置定位、HTTPS 或網絡後重試。';
+        };
+        try {
+          navigator.geolocation.getCurrentPosition(async position => {
+            if (requestId !== nearestRequest) return;
+            const latitude = Number(position.coords?.latitude);
+            const longitude = Number(position.coords?.longitude);
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+                Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+              errorMessage({code:2}); return;
+            }
+            visitorCoordinates = {latitude, longitude};
+            nearestExternalMap.href = 'https://www.google.com/maps/search/' +
+              encodeURIComponent('電影院') + '/@' + latitude.toFixed(5) + ',' + longitude.toFixed(5) + ',14z';
+            nearestExternalMap.classList.remove('hidden');
+            nearestStatus.textContent = '已取得定位，正在查詢影城位置…';
+            try { await locateCinemaAddresses(requestId); } catch {}
+            if (requestId !== nearestRequest) return;
+            nearestButton.disabled = false;
+            const available = cinemas.filter(cinema => Number.isFinite(distanceToCinema(cinema))).length;
+            if (available === 0) {
+              distanceSortActive = false;
+              nearestStatus.textContent = '影城地址服務暫時無法使用，請改用 Google Maps 附近搜尋，或原有篩選。';
+              return;
+            }
+            distanceSortActive = true;
+            nearestReset.classList.remove('hidden');
+            const nearest = filteredCinemas(currentFilters())
+              .filter(cinema => Number.isFinite(distanceToCinema(cinema)))
+              .sort((a,b) => distanceToCinema(a) - distanceToCinema(b))[0];
+            if (nearest) selectedMapCinema = nearest.id;
+            render();
+            nearestStatus.textContent = '已依位置排序 ' + available + '／' + cinemas.length +
+              ' 間影城；未能定位的影城列於後方。距離為直線估算，並非交通時間。';
+          }, errorMessage, {enableHighAccuracy:false, timeout:12000, maximumAge:60000});
+        } catch { errorMessage({code:2}); }
+      });
+      nearestReset.addEventListener('click', () => { clearNearestCinema(); render(); });
+    }
+
+
     function mapsSearch(cinema) {
       return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${cinema.name} ${cinema.address}`)}`;
     }
@@ -309,8 +435,15 @@
     }
     function renderMap(filters) {
       const items = filteredCinemas(filters);
+      if (distanceSortActive) items.sort((a,b) =>
+        distanceToCinema(a) - distanceToCinema(b) || a.name.localeCompare(b.name, 'zh-TW'));
       const list = $('#map-place-list');
-      list.innerHTML = items.map((cinema) => `<button class="map-place" type="button" data-cinema-id="${esc(cinema.id)}" aria-current="${cinema.id === selectedMapCinema}"><strong>${esc(cinema.name)}</strong><span>${esc(cinema.address)}</span><small>${cinema.directoryOnly?'尚未接入場次':'場次已接入'}</small></button>`).join('');
+      list.innerHTML = items.map((cinema) => {
+        const distance = distanceToCinema(cinema);
+        const distanceLabel = !distanceSortActive ? '' : Number.isFinite(distance)
+          ? '約 ' + distance.toFixed(1) + ' 公里（直線） · ' : '距離未取得 · ';
+        return `<button class="map-place" type="button" data-cinema-id="${esc(cinema.id)}" aria-current="${cinema.id === selectedMapCinema}"><strong>${esc(cinema.name)}</strong><span>${esc(cinema.address)}</span><small>${distanceLabel}${cinema.directoryOnly?'尚未接入場次':'場次已接入'}</small></button>`;
+      }).join('');
       list.querySelectorAll('.map-place').forEach((button) => button.addEventListener('click', () => {
         const cinema = cinemas.find((item) => item.id === button.dataset.cinemaId);
         setMap(cinema);
@@ -431,7 +564,7 @@
     [cinemaSelect, districtSelect, formatSelect].forEach((control) => control.addEventListener('change', render));
     sortSelect.addEventListener('change', render);
     $('#clear').addEventListener('click', () => {
-      queryInput.value = ''; cinemaSelect.value = ''; districtSelect.value = ''; formatSelect.value = ''; selectedMovieKeys = []; render(); queryInput.focus();
+      queryInput.value = ''; cinemaSelect.value = ''; districtSelect.value = ''; formatSelect.value = ''; selectedMovieKeys = []; clearNearestCinema(); render(); queryInput.focus();
     });
     const picker=document.getElementById('date-picker'); picker.value=selectedDate; picker.min=taipeiTodayKey; picker.max=addDateKeyDays(taipeiTodayKey,180); picker.addEventListener('change',function(){if(/^\d{4}-\d{2}-\d{2}$/.test(picker.value)){selectedDate=picker.value;render();}});
     const stamp = value => value ? new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(value)) : '尚無成功資料';
