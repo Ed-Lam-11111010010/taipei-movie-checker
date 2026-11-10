@@ -106,7 +106,6 @@
       '<span>'+esc(row.format)+'</span>'+
       '<span class="film-session-price" title="'+esc(price.note)+'">'+esc(price.value)+'</span></div>'+
       '<div class="film-session-actions">'+
-      '<a class="film-location" href="'+esc(mapsSearch(cinema))+'" target="_blank" rel="noopener noreferrer" aria-label="在 Google Maps 查看'+esc(cinema.name)+'的位置">⌖ 查看影城位置 ↗</a>'+
       (ticket?'<a class="film-ticket" href="'+esc(ticket.url)+'" target="_blank" rel="noopener noreferrer" title="'+
         esc(ticket.direct?'來源提供已驗證場次連結':ticket.infoOnly?'請在來源頁核對場次或購票方式，不保證線上售票':'需在訂票平台重新選擇電影、日期和時間')+'">'+
         esc(ticket.label)+'</a>':'<span>請至影城查詢購票方式</span>')+
@@ -117,7 +116,8 @@
     const guide=cinema.priceGuide||{};
     const priceUrl=sourceLink(guide.sourceUrl);
     return '<article class="film-venue"><header class="film-venue-head"><div><h4>'+esc(cinema.name)+
-      '</h4><p>'+esc(cinema.district)+' · '+rows.length+' 場</p></div>'+
+      '</h4><p>'+esc(cinema.district)+' · '+rows.length+' 場</p>'+
+      '<a class="film-location" href="'+esc(mapsSearch(cinema))+'" target="_blank" rel="noopener noreferrer" aria-label="在 Google Maps 查看'+esc(cinema.name)+'的位置">⌖ 查看影城位置 ↗</a></div>'+
       '<div class="film-venue-guide">'+
       (priceUrl?'<a href="'+esc(priceUrl)+'" target="_blank" rel="noopener noreferrer">'+
         (guide.source==='official'?'影城票價公告 ↗':'第三方票價參考 ↗')+'</a>':'')+

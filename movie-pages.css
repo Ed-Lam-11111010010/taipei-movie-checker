@@ -76,9 +76,8 @@
   .page-movies .film-tools { gap:9px; margin:13px 0 10px; }
 }
 
-/* In movie detail, locating the venue is the first action; source verification
-   stays accessible as a visually quieter, underlined reference. */
-.film-session-actions .film-location{border-color:var(--purple);background:#f1eef6;color:var(--ink);font-weight:800;}
+/* Place the cinema map action once in the venue header, not on every screening. */
+.film-venue-head .film-location{display:inline-flex;align-items:center;justify-content:center;min-height:44px;max-width:100%;box-sizing:border-box;margin-top:8px;padding:9px 12px;border:1px solid var(--purple);border-radius:7px;background:#f1eef6;color:var(--ink);font-size:12px;font-weight:800;text-decoration:none;line-height:1.4;text-align:center;}
+.film-venue-head .film-location:focus-visible,.film-session-actions .film-source-reference:focus-visible{outline:3px solid var(--purple);outline-offset:2px;}
 .film-session-actions .film-source-reference{border:0;background:transparent;color:var(--muted);padding:8px 4px;font-weight:500;text-decoration:underline;text-underline-offset:3px;}
-.film-session-actions .film-location:focus-visible,.film-session-actions .film-source-reference:focus-visible{outline:3px solid var(--purple);outline-offset:2px;}
-@media(max-width:530px){.film-session-actions .film-source-reference{flex:1 1 100%;justify-content:flex-start;text-align:left;}}
+@media(max-width:530px){.film-session-actions .film-source-reference{flex:1 1 100%;justify-content:flex-start;text-align:left;}.film-venue-head .film-location{width:100%;justify-content:center;}}
