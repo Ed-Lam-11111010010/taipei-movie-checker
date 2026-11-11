@@ -14,6 +14,11 @@ const maximumDate = addDays(today, 30);
 // or not the site's navigation advertises them. Only trustworthy rows publish.
 const LOOKAHEAD_DAYS = 7;
 const SOURCE_FETCH_CONCURRENCY = 4;
+// GitHub-hosted fetches of Vieshow and ShowTimes official sites have returned
+// HTTP 403. Use publicly readable, cinema/date-validated @movies records by
+// default. The direct adapters remain for an explicitly authorised source
+// integration; never work around 403 with impersonation, proxies or cookies.
+const ALLOW_OFFICIAL_SOURCE_FETCH = process.env.MOVIE_CHECKER_ALLOW_OFFICIAL_SOURCE_FETCH === '1';
 const validTime = /^([01]\d|2[0-3]):[0-5]\d$/;
 const seen = new Set();
 const output = [];
@@ -471,7 +476,7 @@ async function get(url, rawHtml = false, timeoutMs = 22000) {
 function candidateSourceUrls(cinema, newDirectory) {
   const urls = [];
   if (newDirectory) {
-    if (showtimesOfficial[cinema.id])
+    if (ALLOW_OFFICIAL_SOURCE_FETCH && showtimesOfficial[cinema.id])
       urls.push([today,'https://www.showtimes.com.tw/cinemas/'+showtimesOfficial[cinema.id][0]+'/','showtimes-official']);
     if (cinema.id==='fuzhong15') {
       urls.push([today,'https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260','fuzhong']);
@@ -488,9 +493,10 @@ function candidateSourceUrls(cinema, newDirectory) {
       }
     }
   } else if (cinema.id.startsWith('vieshow-')) {
-    urls.push([today, cinema.officialUrl, 'vieshow']);
-    // Official Vieshow often blocks automated access: consult its verified
-    // alternate venue page as well as the seven explicit dates.
+    if (ALLOW_OFFICIAL_SOURCE_FETCH)
+      urls.push([today, cinema.officialUrl, 'vieshow']);
+    // Use public, cinema-identified @movies venue pages by default; official
+    // requests on the GitHub runner have repeatedly returned HTTP 403.
     urls.push([today, 'https://www.atmovies.com.tw/showtime/' +
       atmoviesFallback[cinema.id][0] + '/a02/', 'atmovies']);
     for (let d = 0; d < LOOKAHEAD_DAYS; d++) {
@@ -502,7 +508,8 @@ function candidateSourceUrls(cinema, newDirectory) {
     const day = addDays(today,d);
     urls.push([day, cinema.showtimesUrl + '&DT=' + day.replaceAll('-', '%2F'), 'ambassador']);
   } else if (cinema.id === 'showtime-xinxin') {
-    urls.push([today,'https://www.showtimes.com.tw/cinemas/2/','showtimes-official']);
+    if (ALLOW_OFFICIAL_SOURCE_FETCH)
+      urls.push([today,'https://www.showtimes.com.tw/cinemas/2/','showtimes-official']);
     urls.push([today,'https://www.atmovies.com.tw/showtime/t02d03/a02/','atmovies']);
     for (let d=0;d<LOOKAHEAD_DAYS;d++) {
       const day = addDays(today,d);
@@ -512,6 +519,9 @@ function candidateSourceUrls(cinema, newDirectory) {
   return urls;
 }
 async function run() {
+  console.log('Source routing: ' + (ALLOW_OFFICIAL_SOURCE_FETCH ?
+    'authorised official direct fetches enabled' :
+    'public @movies for Vieshow/ShowTimes; direct official fetches disabled (HTTP 403 observed)'));
   const previous = JSON.parse(fs.readFileSync('catalog.json','utf8'));
   if (!Array.isArray(previous.cinemas)) throw new Error('Cinema catalog missing');
   const original = previous.cinemas.filter(c => primaryCinemaIds.has(c.id));
@@ -607,7 +617,7 @@ async function run() {
       coverage: dates, dateChecks,
       message: success ? rows.length + ' 個可解析場次／' + dates.length + ' 個日期' +
         '；未來7日逐日驗證 '+dateChecks.filter(x=>x.state==='verified').length+'/7 日' +
-        (usedFallback ? '；威秀官方來源拒絕自動請求，改用開眼影城頁' : '') +
+        (usedFallback ? '；使用開眼影城公開時刻表（官方來源限制自動讀取）' : '') +
         (error && !usedFallback ? '；其他頁面讀取失敗' : '') :
         '無法安全解析場次；請前往來源網頁確認' });
     console.log(cinema.id + ': ' + rows.length + ' screenings, verified_dates=' +
@@ -677,6 +687,31 @@ function selftest() {
   if (again.join(',') !== visible.join(',') || output.length - beforeVisible !== 2)
     throw Error('Repeated source fetch changed date verification or introduced duplicates');
   output.splice(beforeVisible);
+  // GitHub Actions must not repeatedly request known-restricted first-party
+  // sites by default: they respond HTTP 403 and contribute no trusted rows.
+  if (!ALLOW_OFFICIAL_SOURCE_FETCH) {
+    for (const [cinema, newDirectory] of [
+      [{id:'vieshow-xinyi',officialUrl:'https://www.vscinemas.com.tw/theater/detail.aspx?id=1'}, false],
+      [{id:'showtime-xinxin'}, false],
+      [{id:'showtime-dome'}, true],
+      [{id:'showtime-tucheng'}, true],
+      [{id:'showtime-shulin'}, true]
+    ]) {
+      const candidates=candidateSourceUrls(cinema,newDirectory);
+      if (candidates.some(([day,url]) =>
+          new URL(url).hostname==='www.vscinemas.com.tw' ||
+          new URL(url).hostname==='www.showtimes.com.tw')) {
+        throw Error('Restricted official venue requested in the default GitHub source route: '+cinema.id);
+      }
+      if (!candidates.some(candidate=>candidate[2]==='atmovies'))
+        throw Error('Public @movies fallback missing for '+cinema.id);
+      for (const date of [addDays(today,5),addDays(today,6)]) {
+        if (!candidates.some(([day,url,kind])=>day===date && kind==='atmovies' &&
+            url.includes(date.replaceAll('-',''))))
+          throw Error('Public fallback missing distant future date for '+cinema.id+': '+date);
+      }
+    }
+  }
   // Every cinema must actually attempt +5/+6 day URLs: listing those dates
   // in a landing-page navigation is not sufficient proof of checking them.
   const explicitDay5=addDays(today,5),explicitDay6=addDays(today,6);
