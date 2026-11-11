@@ -2,13 +2,14 @@ name: Update cinema source snapshots
 on:
   workflow_dispatch:
   schedule:
-    # Around 08:17, 14:17, 20:17 and 02:17 Taipei (UTC+8).
-    # Avoid minute 00: GitHub Actions can delay/drop top-of-hour schedules.
-    - cron: "17 0,6,12,18 * * *"
+    # Six staggered checks every four hours (Taipei time: 00:17, 04:17,
+    # 08:17, 12:17, 16:17, 20:17). GitHub cron is best-effort.
+    - cron: "17 0,4,8,12,16,20 * * *"
   push:
     paths:
       - ".github/workflows/sync-showtimes.yml"
       - "scripts/sync-showtimes.cjs"
+      - "scripts/audit-catalog.cjs"
       - "theater-directory.js"
 
 permissions:
@@ -35,12 +36,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install HTML-to-Markdown converter
-        run: npm install --no-save --no-audit --no-fund --prefix /tmp/movie-checker-deps turndown@7.2.0
-      - name: Validate source parser
-        run: node scripts/sync-showtimes.cjs --self-test
+      - name: Install HTML parser and UI smoke test dependencies
+        run: npm install --no-save --no-audit --no-fund --prefix /tmp/movie-checker-deps turndown@7.2.0 jsdom@26.1.0
+      - name: Validate source parser and coverage auditor
+        run: |
+          node scripts/sync-showtimes.cjs --self-test
+          node scripts/audit-catalog.cjs --self-test
+      - name: Preserve previous source snapshot
+        run: cp catalog.json "${RUNNER_TEMP}/previous-catalog.json"
       - name: Read and validate all 38 cinema candidates (only publish verified rows)
         run: node scripts/sync-showtimes.cjs
+      - name: Reject malformed, duplicate or severely regressed source data
+        run: node scripts/audit-catalog.cjs --guard --previous "${RUNNER_TEMP}/previous-catalog.json"
+      - name: Test all four pages with this new candidate snapshot
+        run: node scripts/test-pages.cjs
       - name: Commit verified source snapshot
         shell: bash
         run: |
@@ -67,3 +76,8 @@ jobs:
           done
           echo "Failed to publish after retrying" >&2
           exit 1
+      # A partially published week must not be reported as fully healthy.
+      # The validated rows remain published; this final step separately fails
+      # when the user's requested 7-day coverage cannot be verified.
+      - name: Alert when future-day coverage is incomplete
+        run: node scripts/audit-catalog.cjs --strict

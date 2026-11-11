@@ -226,6 +226,12 @@ async function test() {
       }
     }
     assert.ok(document.getElementById('page-data-summary').textContent.includes('筆'), 'movie page shows data freshness');
+    assert.ok(document.getElementById('source-health').textContent.includes('逐日已驗證影城'),
+      'all published pages disclose actual daily cinema coverage');
+    const nextDaysWithShortage = catalog.sources.some(source => Array.isArray(source.dateChecks) &&
+      source.dateChecks.some(entry => entry.state === 'unverified'));
+    if(nextDaysWithShortage) assert.ok(document.getElementById('page-data-summary').textContent.includes('覆蓋不足'),
+      'partial future dates are visibly disclosed, not presented as complete');
     assert.equal(document.body.dataset.page,'movies');
     console.log('PASS Movies:',films.length,'film tiles; shareable route',route);
   } finally { movies.window.close(); }

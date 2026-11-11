@@ -583,8 +583,18 @@
         const success = catalogue.sources.filter(s => s.state === 'ok' || (s.state === 'partial' && s.lastSuccessAt)).length;
         const age = Date.now() - Date.parse(catalogue.checkedAt);
         const stale = !Number.isFinite(age) || age < -15 * 60000 || age > 12 * 3600000;
-        summary.textContent = (prefix || '來源場次快照') + '・' + showings.length + ' 筆 / ' + success + ' 間影城・查核 ' + stamp(catalogue.checkedAt) + '（台北）' + (stale ? '・資料可能過期' : '');
-        detail.textContent = '只顯示已取得的場次，未取得不代表沒有放映。' + (stale ? '目前快照超過 12 小時或時間不明，請優先前往官方影城確認。\n' : '\n') +
+        const windowDates = Array.from({length: 7}, (_, index) => addDateKeyDays(taipeiDateKey(), index));
+        const coverage = windowDates.map(date => ({
+          date, count: catalogue.sources.filter(source =>
+            source.dateChecks?.some(check => check.date === date && check.state === 'verified')).length
+        }));
+        const limited = coverage.slice(1).find(entry => entry.count < Math.ceil(catalogue.sources.length * .25));
+        const coverageLabel = coverage.map(entry =>
+          entry.date.slice(5).replace('-', '/') + ' ' + entry.count + '/' + catalogue.sources.length + ' 間').join('、');
+        summary.textContent = (prefix || '來源場次快照') + '・' + showings.length + ' 筆 / ' + success + ' 間影城・查核 ' + stamp(catalogue.checkedAt) + '（台北）' + (stale ? '・資料可能過期' : '') +
+          (limited ? '・未來場次覆蓋不足（' + limited.date.slice(5).replace('-', '/') + ' 僅 ' + limited.count + '/' + catalogue.sources.length + ' 間）' : '');
+        detail.textContent = '逐日已驗證影城（未公布或無法解析不代表停映）：' + coverageLabel + '。\n' +
+          '只顯示已取得的場次，未取得不代表沒有放映。' + (stale ? '目前快照超過 12 小時或時間不明，請優先前往官方影城確認。\n' : '\n') +
           catalogue.sources.map(s => (cinemas.find(c=>c.id===s.cinemaId)?.name || s.cinemaId) + '：' + s.message).join('\n');
       } else {
         summary.textContent = hostedSnapshot ? '等待正式電影場次資料' : '本機測試資料（非公開場次）';

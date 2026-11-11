@@ -16,6 +16,7 @@ on:
       - "catalog.json"
       - "scripts/test-pages.cjs"
       - "scripts/sync-showtimes.cjs"
+      - "scripts/audit-catalog.cjs"
       - ".github/workflows/test-pages.yml"
 
 permissions:
@@ -42,5 +43,9 @@ jobs:
         run: npm install --no-audit --no-fund --no-save --prefix /tmp/movie-checker-ui-test jsdom@26.1.0 turndown@7.2.0
       - name: Validate trusted source parsing and advertised future date discovery
         run: node scripts/sync-showtimes.cjs --self-test
+      - name: Validate snapshot auditor and current catalog structure
+        run: |
+          node scripts/audit-catalog.cjs --self-test
+          node scripts/audit-catalog.cjs --guard
       - name: Exercise Movies, Showtimes, Cinemas and Map
         run: node scripts/test-pages.cjs
