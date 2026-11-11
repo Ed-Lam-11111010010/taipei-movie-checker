@@ -5,6 +5,11 @@ on:
     # Six staggered checks every four hours (Taipei time: 00:17, 04:17,
     # 08:17, 12:17, 16:17, 20:17). GitHub cron is best-effort.
     - cron: "17 0,4,8,12,16,20 * * *"
+    # Friday-to-Thursday programs typically start releasing on Wednesdays
+    # 12:00–18:00 Taipei. Check again during and after that release window,
+    # instead of relying on the pre-release Wednesday morning snapshot.
+    # UTC Wednesday 05:23/07:23/09:23/11:23 = Taipei 13:23/15:23/17:23/19:23.
+    - cron: "23 5,7,9,11 * * 3"
   push:
     paths:
       - ".github/workflows/sync-showtimes.yml"

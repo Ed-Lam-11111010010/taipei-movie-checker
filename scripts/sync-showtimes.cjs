@@ -301,6 +301,35 @@ function parseAtmovies(md, cinema, date, url) {
   }
   if (matched < 1) throw new Error('No trustworthy atmovies rows');
 }
+// Venue pages can contain several real, dated screening sections, even when a
+// dated deep link points at a landing page or its date navigation lags.
+// Parse each actual heading independently, never copy one date's showings to
+// another date. parseAtmovies() still checks the cinema identity and exact
+// matching section for every candidate date.
+function parseVisibleAtmoviesDays(md, cinema, requestedDate, sourceUrl) {
+  const expected = atmoviesFallback[cinema.id] || additionalAtmovies[cinema.id];
+  if (!expected || !md.includes(expected[1]))
+    throw new Error('atmovies cinema identity does not match');
+  const headings = [...md.matchAll(/^###\s+(20\d{2}\/\d{2}\/\d{2})(?=[ \t]|$)/gm)]
+    .map(match => match[1].replaceAll('/', '-'));
+  const visibleDays = [...new Set(headings.filter(date =>
+    date >= today && date <= addDays(today, LOOKAHEAD_DAYS - 1)))].sort();
+  const accepted = [];
+  // A requested deep link with no such heading must not be accepted as
+  // proof that the requested day's program has been published.
+  for (const date of visibleDays) {
+    const before = output.length;
+    try {
+      parseAtmovies(md, cinema, date, sourceUrl);
+      if (output.length > before) accepted.push(date);
+    } catch (error) {
+      if (!/No trustworthy atmovies rows/.test(error.message)) throw error;
+    }
+  }
+  if (!accepted.length)
+    throw new Error('No trustworthy dated atmovies showtimes in the next seven days');
+  return accepted;
+}
 // Navigation is advisory only: accept future dates from an identity-matched
 // cinema header and validate every requested day with parseAtmovies().
 function advertisedAtmoviesDays(md, cinema) {
@@ -470,9 +499,14 @@ async function run() {
           // The seven dated requests are always present; navigation only
           // confirms dates the upstream site actually advertises.
           queueAdvertisedAtmoviesDates(urls,markdown,cinema);
-          parseAtmovies(markdown,cinema,day,url);
+          const acceptedDays = parseVisibleAtmoviesDays(markdown,cinema,day,url);
           if (newDirectory && !discoveredTicketPortal)
             discoveredTicketPortal=atmoviesTicketPortal(markdown,cinema);
+          noteVerifiedDays();
+          // A page containing only another date must not pass this date's
+          // verification, though all independently parsed days are retained.
+          if (!acceptedDays.includes(day))
+            throw new Error('Requested date ' + day + ' is not published on this source page');
         }
         noteVerifiedDays();
       } catch (failure) {
@@ -563,6 +597,29 @@ function selftest() {
       parsedSecond[0].sourceBusinessDate!==isolatedNext)
     throw new Error('Cross-date contamination: first date recorded under later date');
   output.splice(beforeIsolation); // Leave subsequent parser fixtures independent.
+  // A multi-date source page must import both *real* headings, but only once,
+  // even if the same source is fetched by today's and tomorrow's URLs.
+  const multiVisible = [isolatedCinema.name,
+    '### '+today.replaceAll('-','/')+' (三)',
+    '* [跨日期可見甲](/movie/testvisiblea/)',
+    '* 12：15',
+    '### '+isolatedNext.replaceAll('-','/')+' (四)',
+    '* [跨日期可見乙](/movie/testvisibleb/)',
+    '* 18：40',
+    '### '+addDays(today, 8).replaceAll('-','/')+' (四)',
+    '* [不應出現的遠期場次](/movie/testvisiblefar/)',
+    '* 20：40'
+  ].join('\n');
+  const beforeVisible = output.length;
+  const visible = parseVisibleAtmoviesDays(multiVisible,isolatedCinema,today,isolationSource);
+  if (visible.join(',') !== [today,isolatedNext].join(',') ||
+      output.length - beforeVisible !== 2 ||
+      output.slice(beforeVisible).some(row=>row.title==='不應出現的遠期場次'))
+    throw Error('Date-scoped multi-section source import failed');
+  const again = parseVisibleAtmoviesDays(multiVisible,isolatedCinema,isolatedNext,isolationSource);
+  if (again.length || output.length - beforeVisible !== 2)
+    throw Error('Repeated source fetch introduced duplicates');
+  output.splice(beforeVisible);
   // Every cinema must actually attempt +5/+6 day URLs: listing those dates
   // in a landing-page navigation is not sufficient proof of checking them.
   const explicitDay5=addDays(today,5),explicitDay6=addDays(today,6);
@@ -653,7 +710,7 @@ function selftest() {
   parseFuzhong(fuzhongFixture,{id:'fuzhong15'},'https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260');
   if(!output.some(row=>row.cinemaId==='fuzhong15' && row.title==='不丹是幸福'))
     throw Error('Official Fuzhong parser selftest failed');
-  console.log('Parser and source-matched poster selftests passed');
+  console.log('Parser and source-matched poster selftests passed (including multi-date source import)');
 }
 
 if (process.argv.includes('--self-test')) selftest();
