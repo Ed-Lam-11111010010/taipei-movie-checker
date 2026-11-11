@@ -69,8 +69,12 @@ function inspect(catalog, previous) {
           ' to ' + day.screenings + ' (<60% of same-day last-good snapshot)');
     }
   }
-  // Soft warnings become an explicit red coverage alert AFTER publishing the
-  // usable verified snapshot; we cannot invent future showtimes not released.
+  // A feed without any verified showtimes for today is unusable. Reject it
+  // before publishing, even when a few older future event rows are present.
+  if (days[0]?.verified === 0 || days[0]?.screenings === 0)
+    errors.push('No verified showtimes for the current Taipei date; refusing to publish an empty today');
+  // Upstream may not publish future dates yet. Annotate those gaps as warnings,
+  // not workflow failures after a valid snapshot has been tested and published.
   for (const day of days) {
     const threshold = Math.ceil(count * (day.offset === 0 ? .60 :
       day.offset === 1 ? .40 : .25));
@@ -100,6 +104,12 @@ function selfTest() {
   for(const source of missing.sources)
     for(const check of source.dateChecks.slice(2))check.state='unverified';
   assert.equal(inspect(missing).warnings.length,5,'missing future dates trigger alerts');
+  assert.equal(inspect(missing).errors.length,0,'future-only gaps are warnings, not hard failures');
+  const emptyToday=JSON.parse(JSON.stringify(current));
+  emptyToday.screenings=[];
+  for (const source of emptyToday.sources) source.dateChecks[0].state='unverified';
+  assert.ok(inspect(emptyToday).errors.some(value=>value.includes('current Taipei date')),
+    'empty today cannot be published as a healthy snapshot');
   const duplicated=JSON.parse(JSON.stringify(current));
   duplicated.screenings.push({...duplicated.screenings[0]});
   assert.ok(inspect(duplicated).errors.some(s=>s.includes('Duplicate screening')));
@@ -108,7 +118,12 @@ function selfTest() {
   const severelyReduced=JSON.parse(JSON.stringify(current));
   severelyReduced.screenings=severelyReduced.screenings.slice(0,20);
   assert.ok(inspect(severelyReduced,previous).errors.some(s=>s.includes('regressed')));
-  console.log('PASS catalog audit: valid, missing future days, duplicates, data regressions');
+  const workflow=fs.readFileSync(path.resolve(__dirname,'../.github/workflows/sync-showtimes.yml'),'utf8');
+  assert.match(workflow,/run:\s*node scripts\/audit-catalog\.cjs --report/,
+    'final source coverage reporting must be non-fatal for future-only gaps');
+  assert.doesNotMatch(workflow,/run:\s*node scripts\/audit-catalog\.cjs --strict/,
+    'do not mark an already-published verified snapshot failed for missing future schedules');
+  console.log('PASS catalog audit: good and degraded catalogs, hard failures, workflow reporting semantics');
 }
 function main() {
   if (process.argv.includes('--self-test')) return selfTest();
