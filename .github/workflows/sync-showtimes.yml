@@ -35,6 +35,10 @@ jobs:
     timeout-minutes: 20
     env:
       NODE_PATH: /tmp/movie-checker-deps/node_modules
+      # Known first-party WAF restrictions (HTTP 403): do not retry them by
+      # default. Public @movies venue/date pages remain the validated source.
+      # Set to 1 only with the source operator's explicit permission.
+      MOVIE_CHECKER_ALLOW_OFFICIAL_SOURCE_FETCH: "0"
     steps:
       - name: Checkout website repository
         uses: actions/checkout@v4
