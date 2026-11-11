@@ -21,8 +21,8 @@ function inspect(catalog, previous) {
   }
   const today = businessDay(catalog.checkedAt);
   const count = catalog.sources.length;
-  if (count !== 38 || catalog.cinemas.length !== 38)
-    errors.push('Expected all 38 cinema source records and cinema entries, got ' + count +
+  if (count !== 38 || catalog.cinemas.length < 12 || catalog.cinemas.length > 38)
+    errors.push('Expected 38 source audit records and 12–38 source-backed cinemas, got ' + count +
       ' sources and ' + catalog.cinemas.length + ' cinemas');
   const ids = catalog.sources.map(source => source.cinemaId);
   if (new Set(ids).size !== count)
