@@ -300,6 +300,7 @@ function parseAtmovies(md, cinema, date, url) {
     }
   }
   if (matched < 1) throw new Error('No trustworthy atmovies rows');
+  return matched; // Actual matched lines, independent of deduplication on repeated source fetches.
 }
 // Venue pages can contain several real, dated screening sections, even when a
 // dated deep link points at a landing page or its date navigation lags.
@@ -318,10 +319,8 @@ function parseVisibleAtmoviesDays(md, cinema, requestedDate, sourceUrl) {
   // A requested deep link with no such heading must not be accepted as
   // proof that the requested day's program has been published.
   for (const date of visibleDays) {
-    const before = output.length;
     try {
-      parseAtmovies(md, cinema, date, sourceUrl);
-      if (output.length > before) accepted.push(date);
+      if (parseAtmovies(md, cinema, date, sourceUrl) > 0) accepted.push(date);
     } catch (error) {
       if (!/No trustworthy atmovies rows/.test(error.message)) throw error;
     }
@@ -617,8 +616,8 @@ function selftest() {
       output.slice(beforeVisible).some(row=>row.title==='不應出現的遠期場次'))
     throw Error('Date-scoped multi-section source import failed');
   const again = parseVisibleAtmoviesDays(multiVisible,isolatedCinema,isolatedNext,isolationSource);
-  if (again.length || output.length - beforeVisible !== 2)
-    throw Error('Repeated source fetch introduced duplicates');
+  if (again.join(',') !== visible.join(',') || output.length - beforeVisible !== 2)
+    throw Error('Repeated source fetch changed date verification or introduced duplicates');
   output.splice(beforeVisible);
   // Every cinema must actually attempt +5/+6 day URLs: listing those dates
   // in a landing-page navigation is not sufficient proof of checking them.
