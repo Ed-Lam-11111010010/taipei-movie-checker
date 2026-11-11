@@ -10,6 +10,9 @@ on:
     # instead of relying on the pre-release Wednesday morning snapshot.
     # UTC Wednesday 05:23/07:23/09:23/11:23 = Taipei 13:23/15:23/17:23/19:23.
     - cron: "23 5,7,9,11 * * 3"
+    # ShowTimes / Miramar publish on different Wednesday evenings. Recheck
+    # after both have released, independent of the four-hour base schedule.
+    - cron: "41 12,14 * * 3"
   push:
     paths:
       - ".github/workflows/sync-showtimes.yml"

@@ -163,6 +163,14 @@ const additionalAtmovies = {
     "樹林秀泰影城"
   ]
 };
+// First-party theater-level timetables, kept as a separate verified feed
+// from @movies, which can lag the Friday release. No inferred venue IDs.
+const showtimesOfficial = {
+  'showtime-xinxin': ['2', '台北欣欣秀泰影城'],
+  'showtime-dome': ['91', '大巨蛋秀泰影城'],
+  'showtime-tucheng': ['55', '土城秀泰影城'],
+  'showtime-shulin': ['54', '樹林秀泰影城']
+};
 const primaryCinemaIds = new Set([...Object.keys(atmoviesFallback), 'ambassador-main', 'ambassador-changchun']);
 function readAdditionalDirectory() {
   const code = fs.readFileSync('theater-directory.js','utf8');
@@ -191,7 +199,7 @@ function record(cinema, businessDate, title, format, time, sourceUrl, poster = n
   if (!/^\d{4}-\d{2}-\d{2}$/.test(businessDate) || businessDate < today ||
       businessDate > maximumDate || title.length < 2 || title.length > 120 ||
       format.length > 50 || !validTime.test(time)) return;
-  if (!/^https:\/\//.test(sourceUrl) || !['www.vscinemas.com.tw','www.ambassador.com.tw','www.atmovies.com.tw','www.culture.ntpc.gov.tw'].includes(new URL(sourceUrl).hostname)) return;
+  if (!/^https:\/\//.test(sourceUrl) || !['www.vscinemas.com.tw','www.ambassador.com.tw','www.atmovies.com.tw','www.culture.ntpc.gov.tw','www.showtimes.com.tw'].includes(new URL(sourceUrl).hostname)) return;
   // Cinema listings sometimes group after-midnight showings under the previous business day.
   const date = Number(time.slice(0, 2)) < 6 ? addDays(businessDate, 1) : businessDate;
   const key = [cinema.id, businessDate, title, format, time].join('|');
@@ -261,6 +269,52 @@ function parseAmbassador(md, cinema, date, url) {
     if (clock) { record(cinema, date, title, format, clock[1] + ':' + clock[2], url, filmPoster); matched++; }
   }
   if (matched < 1) throw new Error('No Ambassador showtimes');
+}
+
+// ShowTimes' official /cinemas/{id}/ page is grouped by film then business
+// date. Only ticket times inside a named film and explicit date are accepted.
+// One independently identified theater per page prevents cross-venue leakage.
+function parseShowtimesOfficial(md, cinema, url) {
+  const official = showtimesOfficial[cinema.id];
+  if (!official || url !== 'https://www.showtimes.com.tw/cinemas/' + official[0] + '/' ||
+      !md.includes(official[1]) || !md.includes('場次表'))
+    throw new Error('ShowTimes official cinema identity or source URL mismatch');
+  let inSchedule = false, title = '', date = '', matched = 0;
+  const verified = new Set();
+  for (const raw of md.split('\n')) {
+    const line = raw.trim();
+    if (/^##\s+場次表/.test(line)) {
+      inSchedule = true; title = ''; date = ''; continue;
+    }
+    if (!inSchedule) continue;
+    if (/^##\s+/.test(line)) break;
+    const movie = /^###\s+(.*)$/.exec(line);
+    if (movie) {
+      title = movie[1].replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g,' ').trim();
+      if (!title || title.length > 120) title = '';
+      date = '';
+      continue;
+    }
+    const heading = /^(\d{1,2})月(\d{1,2})日\s+週[日一二三四五六]/.exec(line);
+    if (heading) {
+      let year = Number(today.slice(0,4));
+      let candidate = year + '-' + pad(heading[1]) + '-' + pad(heading[2]);
+      if (candidate < addDays(today,-30)) candidate = (year+1) + '-' + pad(heading[1]) + '-' + pad(heading[2]);
+      date = candidate >= today && candidate <= addDays(today,LOOKAHEAD_DAYS-1) ? candidate : '';
+      continue;
+    }
+    if (!title || !date) continue;
+    const clocks = line.matchAll(/(?:^|[^\d])([01]\d|2[0-3]):([0-5]\d)\s+(數位|IMAX|4DX|ULTRA|REMMI|DVA|SCREENX|ATMOS|巨幕|杜比|TITAN|MUCROWN)(?=\s|[\])])/gi);
+    for (const match of clocks) {
+      const time = match[1] + ':' + match[2];
+      const format = match[3].toUpperCase() === '數位' ? '數位' : match[3].toUpperCase();
+      record(cinema,date,title,format,time,url);
+      matched++;
+      verified.add(date);
+    }
+  }
+  if (!matched || !verified.size) throw new Error('No dated official ShowTimes sessions');
+  return [...verified].sort();
 }
 function parseAtmovies(md, cinema, date, url) {
   const expected = atmoviesFallback[cinema.id] || additionalAtmovies[cinema.id];
@@ -417,6 +471,8 @@ async function get(url, rawHtml = false, timeoutMs = 22000) {
 function candidateSourceUrls(cinema, newDirectory) {
   const urls = [];
   if (newDirectory) {
+    if (showtimesOfficial[cinema.id])
+      urls.push([today,'https://www.showtimes.com.tw/cinemas/'+showtimesOfficial[cinema.id][0]+'/','showtimes-official']);
     if (cinema.id==='fuzhong15') {
       urls.push([today,'https://www.culture.ntpc.gov.tw/fuzhong15_chi/xcmovie?XsmSId=0M361641875264878260','fuzhong']);
     } else {
@@ -446,6 +502,7 @@ function candidateSourceUrls(cinema, newDirectory) {
     const day = addDays(today,d);
     urls.push([day, cinema.showtimesUrl + '&DT=' + day.replaceAll('-', '%2F'), 'ambassador']);
   } else if (cinema.id === 'showtime-xinxin') {
+    urls.push([today,'https://www.showtimes.com.tw/cinemas/2/','showtimes-official']);
     urls.push([today,'https://www.atmovies.com.tw/showtime/t02d03/a02/','atmovies']);
     for (let d=0;d<LOOKAHEAD_DAYS;d++) {
       const day = addDays(today,d);
@@ -492,6 +549,7 @@ async function run() {
         if (result.failure) throw result.failure;
         const markdown = result.markdown;
         if (kind==='fuzhong') parseFuzhong(markdown,cinema,url);
+        if (kind==='showtimes-official') parseShowtimesOfficial(markdown,cinema,url);
         if (kind==='vieshow') { parseVieshow(markdown,cinema); officialSucceeded=true; }
         if (kind==='ambassador') parseAmbassador(markdown,cinema,day,url);
         if (kind==='atmovies') {
@@ -700,6 +758,38 @@ function selftest() {
   }
   const directory=readAdditionalDirectory();
   if(directory.length!==26) throw Error('26-theater directory selftest failed');
+  // Official ShowTimes multi-day data is independently verified against the
+  // venue identity, date and format, and deduplicates with @movies standard 2D.
+  const showtimeCinema={id:'showtime-xinxin',name:'台北欣欣秀泰影城'};
+  const showtimeUrl='https://www.showtimes.com.tw/cinemas/2/';
+  const dayAfter=addDays(today,2);
+  const showtimeFixture=['# 台北欣欣秀泰影城','## 場次表',
+    '### [泥面人](/programs/13100/)',
+    Number(today.slice(5,7))+'月'+Number(today.slice(8))+'日 週三',
+    '* [10:20 數位 英語](/tickets/alpha/)',
+    '* [11:50 IMAX 英語](/tickets/beta/)',
+    Number(dayAfter.slice(5,7))+'月'+Number(dayAfter.slice(8))+'日 週五',
+    '* [21:30 數位 英語](/tickets/gamma/)',
+    '## 其他資訊'].join('\n');
+  const beforeShowtimes=output.length;
+  const parsedShowtimesDays=parseShowtimesOfficial(showtimeFixture,showtimeCinema,showtimeUrl);
+  if(parsedShowtimesDays.join(',')!==[today,dayAfter].join(',') || output.length-beforeShowtimes!==3 ||
+    !output.slice(beforeShowtimes).some(x=>x.format==='IMAX'))
+    throw Error('ShowTimes official future-day parser failed');
+  try {
+    parseShowtimesOfficial(showtimeFixture.replace('台北欣欣秀泰影城','樹林秀泰影城'),showtimeCinema,showtimeUrl);
+    throw Error('Cross-cinema ShowTimes official identity was accepted');
+  } catch(error) {
+    if (!/identity or source URL mismatch/.test(error.message)) throw error;
+  }
+  parseShowtimesOfficial(showtimeFixture,showtimeCinema,showtimeUrl);
+  if(output.length-beforeShowtimes!==3)throw Error('Repeated ShowTimes official fetch duplicated rows');
+  const dupAtmovies=['台北欣欣秀泰影城','### '+today.replaceAll('-','/')+' (三)',
+    '* [泥面人](/movie/testshowtimes/)',
+    '* 10：20'].join('\n');
+  parseAtmovies(dupAtmovies,showtimeCinema,today,'https://www.atmovies.com.tw/showtime/t02d03/a02/'+today.replaceAll('-','')+'/');
+  if(output.length-beforeShowtimes!==3)throw Error('Official / @movies standard-time duplicate');
+  output.splice(beforeShowtimes);
   // Municipal cinema pages list sessions in an HTML table with status and
   // multiple film-program rows. Only use the dated table, not unrelated links.
   const fuzhongFixture='<h1>府中15</h1><h2>'+today.slice(0,4)+'年'+Number(today.slice(5,7))+
