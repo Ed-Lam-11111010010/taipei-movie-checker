@@ -228,10 +228,15 @@ async function test() {
     assert.ok(document.getElementById('page-data-summary').textContent.includes('筆'), 'movie page shows data freshness');
     assert.ok(document.getElementById('source-health').textContent.includes('逐日已驗證影城'),
       'all published pages disclose actual daily cinema coverage');
-    const nextDaysWithShortage = catalog.sources.some(source => Array.isArray(source.dateChecks) &&
-      source.dateChecks.some(entry => entry.state === 'unverified'));
-    if(nextDaysWithShortage) assert.ok(document.getElementById('page-data-summary').textContent.includes('覆蓋不足'),
-      'partial future dates are visibly disclosed, not presented as complete');
+    const futureDates = Array.from({length:6},(_,offset) => {
+      const date = new Date(clock + (offset+1)*86400000);
+      return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
+    });
+    const limitedDates = futureDates.some(date =>
+      catalog.sources.filter(source => source.dateChecks?.some(check =>
+        check.date === date && check.state === 'verified')).length < Math.ceil(catalog.sources.length*.25));
+    if(limitedDates) assert.ok(document.getElementById('page-data-summary').textContent.includes('覆蓋不足'),
+      'severely unverified future days must be visibly disclosed');
     assert.equal(document.body.dataset.page,'movies');
     console.log('PASS Movies:',films.length,'film tiles; shareable route',route);
   } finally { movies.window.close(); }
