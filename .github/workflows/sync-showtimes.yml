@@ -2,14 +2,15 @@ name: Update cinema source snapshots
 on:
   workflow_dispatch:
   schedule:
-    # Six staggered checks every four hours (Taipei time: 00:17, 04:17,
-    # 08:17, 12:17, 16:17, 20:17). GitHub cron is best-effort.
+    # Six staggered checks every four hours (Taipei time: 08:17, 12:17,
+    # 16:17, 20:17, 00:17, 04:17). GitHub cron is best-effort.
     - cron: "17 0,4,8,12,16,20 * * *"
-    # Friday-to-Thursday programs typically start releasing on Wednesdays
-    # 12:00–18:00 Taipei. Check again during and after that release window,
-    # instead of relying on the pre-release Wednesday morning snapshot.
-    # UTC Wednesday 05:23/07:23/09:23/11:23 = Taipei 13:23/15:23/17:23/19:23.
-    - cron: "23 5,7,9,11 * * 3"
+    # The new Friday-to-Thursday programme appears on @movies on THURSDAY
+    # afternoon/evening Taipei time (observed 2026-11-05: Friday went from
+    # 105 to 1,714 sessions between Thu 12:15 and 21:42 Taipei). Check hourly
+    # through that window so Friday onward shows up within about an hour.
+    # UTC Thursday 05:37–14:37 = Taipei Thursday 13:37–22:37.
+    - cron: "37 5-14 * * 4"
     # ShowTimes / Miramar publish on different Wednesday evenings. Recheck
     # after both have released, independent of the four-hour base schedule.
     - cron: "41 12,14 * * 3"
