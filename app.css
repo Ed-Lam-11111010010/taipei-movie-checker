@@ -383,3 +383,7 @@
 .demo-label[data-freshness="aging"]{background:#f6ead0;color:#6f511f}
 .demo-label[data-freshness="stale"]{background:#f8dcd6;color:#7a2a1d}
 @media(max-width:760px){.top-links{flex-wrap:wrap;row-gap:8px}.top-links .site-nav{flex:1 0 100%}.topbar .demo-label[data-freshness]{display:inline-flex;margin:0 0 4px;font-size:10px;padding:6px 10px}}
+
+/* Event / re-release label for merged titles (特別場, 重映版, 嬰兒車電影院…). */
+.tag.tag-event,.film-session-event{background:#efe6fb;color:#4b2f86}
+.film-session-event{padding:3px 8px;border-radius:99px;font-size:11px;font-weight:700}

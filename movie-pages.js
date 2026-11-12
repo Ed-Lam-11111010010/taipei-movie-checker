@@ -83,7 +83,7 @@
       if (!cinemaIds.has(row.cinemaId) || !isUpcoming(row)) continue;
       const key=titleKey(row.title);
       if (!key) continue;
-      if (!groups.has(key)) groups.set(key,{key,title:key,rows:[],cinemaIds:new Set(),poster:null,first:Infinity});
+      if (!groups.has(key)) groups.set(key,{key,title:row.title,rows:[],cinemaIds:new Set(),poster:null,first:Infinity});
       const group=groups.get(key);
       group.rows.push(row);
       group.cinemaIds.add(row.cinemaId);
@@ -103,7 +103,7 @@
     const price=priceFor(row,cinema), ticket=ticketFor(row,cinema), source=sourceLink(row.sourceUrl);
     return '<div class="film-session"><div class="film-session-info"><strong>'+esc(row.time)+'</strong>'+
       '<span>'+esc(dateLabel(row.date,{month:'numeric',day:'numeric',weekday:'short'}))+'</span>'+
-      '<span>'+esc(row.format)+'</span>'+
+      '<span>'+esc(row.format)+'</span>'+(row.eventTag?'<span class="film-session-event">'+esc(row.eventTag)+'</span>':'')+
       '<span class="film-session-price" title="'+esc(price.note)+'">'+esc(price.value)+'</span></div>'+
       '<div class="film-session-actions">'+
       (ticket?'<a class="film-ticket" href="'+esc(ticket.url)+'" target="_blank" rel="noopener noreferrer" title="'+

@@ -176,6 +176,26 @@ async function test() {
     const films=document.querySelectorAll('#film-grid .film-tile');
     assert.ok(films.length > 10, 'movies should list source-backed titles');
     const title = films[0].querySelector('.film-tile-title').textContent.trim();
+    // Same-meaning titles merge into one film; event wording becomes a session label.
+    const ct = movies.window.canonicalTitle;
+    for (const [raw, expected, tag] of [
+      ['讓子彈飛.', '讓子彈飛', ''], ['（應援特別場）讓子彈飛', '讓子彈飛', '應援特別場'],
+      ['沙丘：第二部（重映版）', '沙丘：第二部', '重映版'], ['同級生：十週年重映', '同級生', '十週年重映'],
+      ['進擊的鼓手 4K重映', '進擊的鼓手', '4K重映'], ['貓貓影片節CVF 2026', 'CVF2026貓貓影片節', ''],
+      ['【樂齡族電影院】墜惡真相', '墜惡真相', '樂齡族電影院'],
+      ['海洋奇緣(真人版)', '海洋奇緣(真人版)', ''], ['名偵探柯南 第30號殺人事件', '名偵探柯南 第30號殺人事件', ''],
+    ]) {
+      const got = ct(raw);
+      assert.equal(got.title, expected, 'canonical title for ' + raw);
+      assert.equal(got.tags.join('‧'), tag, 'event tag for ' + raw);
+    }
+    const norm = movies.window.normalizeMovieFormat;
+    assert.equal(norm('IMAX版'), norm('IMAX'), 'IMAX版 and IMAX are one version');
+    assert.equal(norm('4DX版'), norm('4DX'), '4DX版 and 4DX are one version');
+    assert.notEqual(norm('ULTRA 4DX'), norm('4DX'), 'ULTRA 4DX stays separate');
+    const tileTitles = [...films].map(f => f.querySelector('.film-tile-title').textContent.trim());
+    assert.equal(new Set(tileTitles).size, tileTitles.length, 'each film is listed once');
+    assert.ok(!tileTitles.some(t => /[.。．]$|^[（(【]/.test(t)), 'no stray punctuation or event prefixes in film titles');
     const yonghe=movies.window.MOVIE_CHECKER_ADDITIONAL_THEATERS.find(c=>c.id==='centuryasia-yonghe');
     assert.ok(yonghe,'Yonghe theater is in directory');
     const ticket=movies.window.movieBookingFor({cinemaId:yonghe.id,isDemo:false},yonghe);

@@ -34,11 +34,31 @@
     let cinemas=hydrateCinemas(catalogue.cinemas);
     // Present the plain title from linked government timetable cells, while
     // retaining original source dates, movie IDs and official booking links.
+    // Sources spell the same film several ways: "讓子彈飛." / "（應援特別場）讓子彈飛",
+    // "沙丘（重映版）", "貓貓影片節CVF 2026". Show them as one film; the event or
+    // re-release wording is kept as eventTag and shown on that session.
+    const TITLE_ALIASES = {'貓貓影片節CVF 2026': 'CVF2026貓貓影片節'};
+    function canonicalTitle(raw) {
+      let title = String(raw).replace(/[\s\u3000]+/g, ' ').trim().replace(/[.。．]+$/g, '').trim();
+      const tags = [];
+      const lead = /^[(（【\[]([^)）】\]]{1,12}(?:場|電影院|影展))[)）】\]]\s*/.exec(title);
+      if (lead) { tags.push(lead[1]); title = title.slice(lead[0].length).trim(); }
+      const tail = /\s*(?:[(（]((?:\d+K)?重映版?|數位修復版?|\d*週年重映)[)）]|[:：]\s*((?:\d+K)?重映版?|[一二三四五六七八九十\d]+週年重映)|\s((?:\d+K)?重映版?|數位修復版?))$/.exec(title);
+      if (tail && title.length > tail[0].length) { tags.push(tail[1] || tail[2] || tail[3]); title = title.slice(0, tail.index).trim(); }
+      title = TITLE_ALIASES[title] || title;
+      return {title, tags};
+    }
     function sanitizePublishedScreenings(records) {
       return records.map(row => {
-        if (row.cinemaId !== 'fuzhong15' || typeof row.title !== 'string') return row;
-        const clean = row.title.replace(/\[([^\]]{1,120})\]\([^)]+\)/g, '$1').trim();
-        return clean === row.title ? row : {...row, title:clean};
+        let next = row;
+        if (row.cinemaId === 'fuzhong15' && typeof row.title === 'string') {
+          const clean = row.title.replace(/\[([^\]]{1,120})\]\([^)]+\)/g, '$1').trim();
+          if (clean !== row.title) next = {...next, title: clean};
+        }
+        if (typeof next.title !== 'string') return next;
+        const {title, tags} = canonicalTitle(next.title);
+        if (title === next.title && !tags.length) return next;
+        return tags.length ? {...next, title, sourceTitle: row.title, eventTag: tags.join('‧')} : {...next, title, sourceTitle: row.title};
       });
     }
     let showings = sanitizePublishedScreenings(catalogue.screenings);
@@ -336,6 +356,9 @@
     }
     function normalizeMovieFormat(format) {
       const compact = format.normalize('NFKC').replace(/[\s‧·・()]/g, '');
+      // "IMAX版" and "IMAX", "4DX版" and "4DX" are the same version.
+      const premium = /^(IMAX|4DX|ULTRA4DX|SCREENX)版?$/i.exec(compact);
+      if (premium) return {IMAX:'IMAX', '4DX':'4DX', ULTRA4DX:'ULTRA 4DX', SCREENX:'ScreenX'}[premium[1].toUpperCase()];
       const digitalFirst = /^(2D|3D)?數位(.+)$/.exec(compact);
       const languageFirst = /^(.+?)(2D|3D)?數位(?:版|板)?$/.exec(compact);
       const language = (digitalFirst?.[2] ?? languageFirst?.[1] ?? '').replace(/(?:版|板)$/, '');
@@ -343,7 +366,7 @@
         英: '英語', 英文: '英語', 英語: '英語', 日: '日語', 日文: '日語', 日語: '日語',
         韓: '韓語', 韓文: '韓語', 韓語: '韓語', 粵: '粵語', 粵語: '粵語',
         國: '國語', 國語: '國語', 中: '中文', 中文: '中文',
-        法: '法語', 法文: '法語', 法語: '法語', 波蘭語: '波蘭語', 泰語: '泰語', 越南語: '越南語',
+        法: '法語', 法文: '法語', 法語: '法語', 波蘭語: '波蘭語', 泰語: '泰語', 越南語: '越南語', 印度語: '印度語', 西班牙語: '西班牙語', 其他語: '其他語言',
       };
       if (!Object.hasOwn(languages, language)) return format;
       const dimension = digitalFirst?.[1] ?? languageFirst?.[2];
@@ -395,7 +418,7 @@
         return `${groupHeading}<article class="screening-card">
           ${posterHtml(item)}
           <div><h3 class="movie-title"><a href="./index.html#movie=${encodeURIComponent(item.title)}">${esc(item.title)}</a></h3>
-            <div class="movie-meta"><span class="tag">${esc(item.format)}</span><span class="tag">${personalImportActive ? "個人匯入 · 未經驗證" : sourceMode() ? "來源快照 · 請於原站核對" : "虛構測試場次"}</span></div>
+            <div class="movie-meta"><span class="tag">${esc(item.format)}</span>${item.eventTag ? `<span class="tag tag-event">${esc(item.eventTag)}</span>` : ''}<span class="tag">${personalImportActive ? "個人匯入 · 未經驗證" : sourceMode() ? "來源快照 · 請於原站核對" : "虛構測試場次"}</span></div>
             <div class="cinema-row"><span class="pin" aria-hidden="true">⌖</span>${esc(cinema.name)}</div>
             <p class="address">${esc(cinema.address)}</p>
           </div>
