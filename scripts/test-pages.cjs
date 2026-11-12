@@ -91,6 +91,10 @@ async function loadPage(name) {
     assert.equal(win.document.activeElement, link, 'navigation link can receive keyboard focus');
   }
   assert.equal(win.document.querySelectorAll('.demo-label').length, 1);
+  const badge = win.document.querySelector('.demo-label');
+  assert.match(badge.textContent, /^更新於 .+ · 今日 [\d,]+ 場$/, name + ': top-bar freshness badge shows age and today count');
+  assert.ok(['fresh','aging','stale'].includes(badge.dataset.freshness), name + ': freshness badge has a state');
+  assert.ok(badge.title.includes('最近查核'), name + ': freshness badge explains the exact check time');
   assert.equal(win.document.querySelectorAll('#toggle-demo-preview').length,0,'no public demo switch');
   assert.ok(!win.document.querySelector('.demo-banner').textContent.includes('虛構'),'public banner should describe source data');
   const sourceDetail=win.document.getElementById('source-details');

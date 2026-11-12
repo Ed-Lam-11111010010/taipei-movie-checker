@@ -42,11 +42,11 @@ jobs:
       MOVIE_CHECKER_ALLOW_OFFICIAL_SOURCE_FETCH: "0"
     steps:
       - name: Checkout website repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: true
       - name: Configure Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
       - name: Install HTML parser and UI smoke test dependencies

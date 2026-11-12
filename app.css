@@ -375,3 +375,11 @@
 .page-map .nearest-external-map{font-size:11px;color:var(--ink);text-underline-offset:3px;}
 .page-map .nearest-cinema-button:focus-visible,.page-map .nearest-cinema-reset:focus-visible{outline:3px solid var(--purple);outline-offset:2px;}
 @media(max-width:620px){.page-map .nearest-cinema-control{padding:10px;}.page-map .nearest-cinema-button{flex-basis:100%;}.page-map .nearest-cinema-reset{flex:1 1 100%;}}
+
+/* Top-bar freshness badge (更新於 … · 今日 … 場). */
+.demo-label[data-freshness]{display:inline-flex;align-items:center;gap:7px;letter-spacing:.02em;font-size:11px;white-space:nowrap}
+.demo-label[data-freshness]::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.75}
+.demo-label[data-freshness="fresh"]{background:#e4f2dc;color:#284c31}
+.demo-label[data-freshness="aging"]{background:#f6ead0;color:#6f511f}
+.demo-label[data-freshness="stale"]{background:#f8dcd6;color:#7a2a1d}
+@media(max-width:760px){.top-links{flex-wrap:wrap;row-gap:8px}.top-links .site-nav{flex:1 0 100%}.topbar .demo-label[data-freshness]{display:inline-flex;margin:0 0 4px;font-size:10px;padding:6px 10px}}

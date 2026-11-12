@@ -568,6 +568,24 @@
     });
     const picker=document.getElementById('date-picker'); picker.value=selectedDate; picker.min=taipeiTodayKey; picker.max=addDateKeyDays(taipeiTodayKey,180); picker.addEventListener('change',function(){if(/^\d{4}-\d{2}-\d{2}$/.test(picker.value)){selectedDate=picker.value;render();}});
     const stamp = value => value ? new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(value)) : '尚無成功資料';
+    // Compact freshness badge in the top bar: how long ago the published
+    // snapshot was checked and how many sessions it holds for today.
+    function updateFreshnessBadge() {
+      const label = document.querySelector('.demo-label');
+      if (!label || personalImportActive || !sourceMode()) { if (label) delete label.dataset.freshness; return; }
+      const checked = Date.parse(catalogue.checkedAt);
+      const minutes = Math.max(0, Math.round((Date.now() - checked) / 60000));
+      const ago = !Number.isFinite(checked) ? '時間不明'
+        : minutes < 1 ? '剛剛' : minutes < 60 ? minutes + ' 分鐘前'
+        : minutes < 48 * 60 ? Math.floor(minutes / 60) + ' 小時前' : Math.floor(minutes / 1440) + ' 天前';
+      const today = taipeiDateKey();
+      const todayCount = showings.filter(item => item.date === today).length;
+      label.dataset.freshness = !Number.isFinite(checked) || minutes > 12 * 60 ? 'stale' : minutes > 6 * 60 ? 'aging' : 'fresh';
+      label.textContent = '更新於 ' + ago + ' · 今日 ' + todayCount.toLocaleString('zh-TW') + ' 場';
+      label.title = '最近查核：' + stamp(catalogue.checkedAt) + '（台北）・目前共 ' + showings.length.toLocaleString('zh-TW') +
+        ' 場・系統約每 4 小時自動檢查' + (label.dataset.freshness === 'stale' ? '・資料可能過期，購票前請向影城確認' : '');
+    }
+    setInterval(updateFreshnessBadge, 60000);
     function renderSourceStatus(prefix) {
       const summary = document.getElementById('sync-time');
       const detail = document.getElementById('source-health');
@@ -601,6 +619,7 @@
         detail.textContent = hostedSnapshot ? '尚未成功載入公開場次，請按重新載入已發布場次。' : '本機開發測試資料。';
       }
       updatePageSummary();
+      updateFreshnessBadge();
     }
     // GitHub Actions updates catalog.json independently of already-open browsers.
     // Recheck only while visible, and on return to an older tab.
@@ -732,6 +751,7 @@
         ? '目前顯示此瀏覽器匯入的個人資料。'
         : '資料為來源網站的有限快照，實際時刻、票價與售票情況請以影城公告為準。';
       document.querySelector('.demo-label').textContent = active ? '個人資料 · 未驗證' : fromSources ? '已發布場次' : '場次載入中';
+      updateFreshnessBadge();
       const liveCountLabel = document.querySelector('.film-explorer-kicker');
       if (liveCountLabel) liveCountLabel.textContent = fromSources
         ? '場次資料收錄 ' + catalogue.cinemas.length + ' 間影城'

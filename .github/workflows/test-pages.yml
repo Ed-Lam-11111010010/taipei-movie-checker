@@ -34,9 +34,9 @@ jobs:
       NODE_PATH: /tmp/movie-checker-ui-test/node_modules
     steps:
       - name: Checkout website
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Configure Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "22"
       - name: Install browser DOM test dependency
